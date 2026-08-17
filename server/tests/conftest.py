@@ -1,4 +1,4 @@
-"""全项目共享测试夹具：合法题库/作答/报告样例（契约校验测试的基础数据）"""
+"""全项目共享测试夹具：合法题库/作答/报告样例 + 独立应用实例（含 SQLite 内存库）"""
 import pytest
 
 from app.core.config import Settings
@@ -7,8 +7,8 @@ from app.core.sensitive import SensitiveFilter
 
 @pytest.fixture
 def settings():
-    """默认测试配置（API Key 为占位值：测试全程 mock 模型，不发起真实请求）"""
-    return Settings(deepseek_api_key="test-key")
+    """默认测试配置（API Key/JWT 密钥为测试值；AUTH_MOCK 默认开，不发起真实微信/LLM 请求）"""
+    return Settings(deepseek_api_key="test-key", jwt_secret="test-secret")
 
 
 @pytest.fixture
@@ -19,20 +19,26 @@ def sensitive():
 
 @pytest.fixture
 def test_app():
-    """创建独立应用实例并注入独立任务存储（用例再按需注入 fake LLM/词表）"""
+    """创建独立应用实例并注入独立任务存储与 SQLite 内存库（用例再按需注入 fake LLM/词表）"""
+    from sqlalchemy.pool import StaticPool
+
+    from app.core.db import DBEngine
     from app.core.tasks import TaskStore
     from app.main import create_app
 
     app = create_app()
     app.state.store = TaskStore()
+    app.state.db = DBEngine()
+    app.state.db.bind("sqlite+aiosqlite://", poolclass=StaticPool)
     return app
 
 
 @pytest.fixture
 async def client(test_app):
-    """基于 test_app 的 httpx 测试客户端（ASGITransport 不经过网络）"""
+    """基于 test_app 的 httpx 测试客户端（ASGITransport 不经过网络；每用例先建表）"""
     from httpx import ASGITransport, AsyncClient
 
+    await test_app.state.db.create_all()
     transport = ASGITransport(app=test_app)
     async with AsyncClient(transport=transport, base_url="http://test") as c:
         yield c

@@ -20,6 +20,17 @@ class Settings:
     task_ttl_seconds: float = 1800  # 内存任务保留时长（30 分钟）
     sensitive_words_file: str = ""  # 可选自定义敏感词表文件路径
     share_url: str = "https://example.com"  # 海报二维码默认指向（上线时配置为小程序 URL Link）
+    mysql_host: str = "127.0.0.1"
+    mysql_port: int = 3306
+    mysql_user: str = "ai_learn"
+    mysql_password: str = ""
+    mysql_db: str = "ai_learn"
+    jwt_secret: str = ""
+    jwt_expire_days: int = 7
+    wechat_appid: str = ""
+    wechat_secret: str = ""
+    auth_mock: bool = True  # 开发期跳过 code2session（WHY：无正式 AppID 也能跑通全流程）
+    auth_mock_openid: str = "mock-user"
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -34,6 +45,15 @@ class Settings:
             except ValueError:
                 return default
 
+        def _int(name: str, default: int) -> int:
+            raw = os.environ.get(name)
+            if not raw:
+                return default
+            try:
+                return int(raw)
+            except ValueError:
+                return default
+
         return cls(
             deepseek_api_key=os.environ.get("DEEPSEEK_API_KEY", ""),
             deepseek_model=os.environ.get("DEEPSEEK_MODEL", "deepseek-v4-flash"),
@@ -43,6 +63,17 @@ class Settings:
             task_ttl_seconds=_float("TASK_TTL_SECONDS", 1800),
             sensitive_words_file=os.environ.get("SENSITIVE_WORDS_FILE", ""),
             share_url=os.environ.get("SHARE_URL", "https://example.com"),
+            mysql_host=os.environ.get("MYSQL_HOST", "127.0.0.1"),
+            mysql_port=_int("MYSQL_PORT", 3306),
+            mysql_user=os.environ.get("MYSQL_USER", "ai_learn"),
+            mysql_password=os.environ.get("MYSQL_PASSWORD", ""),
+            mysql_db=os.environ.get("MYSQL_DB", "ai_learn"),
+            jwt_secret=os.environ.get("JWT_SECRET", ""),
+            jwt_expire_days=_int("JWT_EXPIRE_DAYS", 7),
+            wechat_appid=os.environ.get("WECHAT_APPID", ""),
+            wechat_secret=os.environ.get("WECHAT_SECRET", ""),
+            auth_mock=os.environ.get("AUTH_MOCK", "true").lower() != "false",
+            auth_mock_openid=os.environ.get("AUTH_MOCK_OPENID", "mock-user"),
         )
 
 
