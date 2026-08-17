@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 闯关学习 · 核心业务流程原型</title>
+<style>
+  /* ============ 湖畔手账 · 设计系统 ============ */
+  :root {
+    --paper: #F7F4ED;        /* 羊皮纸米白 · 全局背景 */
+    --page: #FFFDF8;         /* 纸页 · 卡片面 */
+    --lake: #3A6B5C;         /* 湖水青碧 · 主色 */
+    --lake-deep: #2C4A3E;    /* 深湖 · 按压/文字 */
+    --mist: #A8C4B8;         /* 湖光浅 · 辅助 */
+    --wood: #8B6F47;         /* 松木棕 · 分隔/图标 */
+    --ink: #2C3A33;          /* 炭墨 · 正文 */
+    --fog: #6B7A72;          /* 晨雾灰 · 次要文字 */
+    --moss: #4E7D5E;         /* 苔绿 · 答对 */
+    --maple: #B3594C;        /* 枫红棕 · 答错 */
+    --dawn: #D9A441;         /* 晨光金 · 金句点缀 */
+    --serif: 'Noto Serif SC','Songti SC','STSong','SimSun',Georgia,serif;
+    --sans: 'PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #1E2B25;    /* 深湖夜色，衬托纸张 */
+    background-image:
+      radial-gradient(ellipse 80% 50% at 50% -10%, rgba(168,196,184,.12), transparent),
+      radial-gradient(ellipse 60% 40% at 90% 110%, rgba(139,111,71,.10), transparent);
+    font-family: var(--sans);
+    color: #E8E4D8;
+    min-height: 100vh;
+    padding: 48px 24px 72px;
+  }
+
+  /* ---------- 文档头 ---------- */
+  .doc-head { max-width: 1200px; margin: 0 auto 40px; text-align: center; }
+  .doc-head .kicker {
+    font-family: var(--serif); font-size: 13px; letter-spacing: .45em;
+    color: var(--mist); text-transform: uppercase;
+  }
+  .doc-head h1 {
+    font-family: var(--serif); font-weight: 600;
+    font-size: 34px; letter-spacing: .08em; color: #F5F1E6; margin: 12px 0 10px;
+  }
+  .doc-head p { color: #9DB0A6; font-size: 14px; letter-spacing: .05em; }
+  .doc-head .rule {
+    width: 56px; height: 2px; background: var(--dawn);
+    margin: 20px auto 0; border-radius: 1px;
+  }
+
+  /* ---------- 画廊：一行三列，响应式 ---------- */
+  .gallery {
+    max-width: 1200px; margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 44px 36px;
+    justify-items: center;
+  }
+  @media (max-width: 1100px) { .gallery { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+  @media (max-width: 720px)  { .gallery { grid-template-columns: 1fr; } }
+
+  .screen {
+    width: 100%; max-width: 340px;
+    opacity: 0; transform: translateY(18px);
+    animation: rise .7s cubic-bezier(.22,.75,.3,1) forwards;
+  }
+  .screen:nth-child(2) { animation-delay: .08s; }
+  .screen:nth-child(3) { animation-delay: .16s; }
+  .screen:nth-child(4) { animation-delay: .24s; }
+  .screen:nth-child(5) { animation-delay: .32s; }
+  .screen:nth-child(6) { animation-delay: .40s; }
+  .screen:nth-child(7) { animation-delay: .48s; }
+  @keyframes rise { to { opacity: 1; transform: none; } }
+
+  .screen figcaption {
+    margin-top: 14px; text-align: center;
+  }
+  .screen figcaption .no {
+    display: inline-block; font-family: var(--serif); font-size: 12px;
+    color: #1E2B25; background: var(--mist); border-radius: 3px;
+    padding: 1px 8px; margin-right: 8px; letter-spacing: .1em;
+  }
+  .screen figcaption .name {
+    font-family: var(--serif); font-size: 16px; color: #F0ECDF; letter-spacing: .06em;
+  }
+  .screen figcaption .note {
+    display: block; font-size: 12px; color: #879A8F; margin-top: 5px; line-height: 1.6;
+  }
+
+  /* ---------- 手机框 ---------- */
+  .phone {
+    position: relative;
+    width: 340px; height: 736px;
+    background: var(--paper);
+    border-radius: 32px;
+    border: 1px solid rgba(168,196,184,.35);
+    box-shadow:
+      0 24px 60px rgba(0,0,0,.45),
+      0 2px 0 rgba(245,241,230,.06) inset;
+    overflow: hidden;
+    color: var(--ink);
+    display: flex; flex-direction: column;
+  }
+  /* 纸张纹理 */
+  .phone::before {
+    content:''; position: absolute; inset: 0; pointer-events: none; z-index: 1;
+    background:
+      repeating-linear-gradient(0deg, transparent 0 3px, rgba(139,111,71,.015) 3px 4px);
+  }
+
+  /* 状态栏 */
+  .statusbar {
+    position: relative; z-index: 2;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 22px 8px;
+    font-size: 11px; font-weight: 600; color: var(--fog);
+  }
+  .statusbar .capsule {
+    width: 66px; height: 22px; border-radius: 11px;
+    border: 1px solid rgba(139,111,71,.35);
+    display: flex; align-items: center; justify-content: center; gap: 4px;
+  }
+  .statusbar .capsule i { width: 3px; height: 3px; border-radius: 50%; background: var(--fog); }
+
+  /* 内容区 */
+  .body { position: relative; z-index: 2; flex: 1; padding: 8px 22px 24px; display: flex; flex-direction: column; overflow-y: auto; scrollbar-width: none; }
+  .body::-webkit-scrollbar { display: none; }
+
+  /* 章节号 */
+  .chapter {
+    font-family: var(--serif); font-size: 11px; letter-spacing: .35em;
+    color: var(--wood); text-transform: uppercase;
+  }
+
+  /* 水波纹装饰线（SVG 底） */
+  .waves { display: block; width: 100%; height: 10px; opacity: .5; }
+
+  /* 卡片 */
+  .card {
+    background: var(--page);
+    border: 1px solid rgba(139,111,71,.16);
+    border-radius: 16px;
+    box-shadow: 0 1px 0 rgba(139,111,71,.10), 0 6px 18px rgba(44,58,51,.05);
+  }
+
+  /* 主按钮（木刻感：底部 2px 深色线） */
+  .btn-primary {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    height: 50px; border-radius: 12px; border: none; cursor: pointer;
+    background: var(--lake); color: #FBF8EF;
+    font-size: 15px; font-weight: 600; letter-spacing: .12em;
+    box-shadow: 0 3px 0 var(--lake-deep);
+    transition: transform .12s ease, box-shadow .12s ease;
+  }
+  .btn-primary:active { transform: translateY(3px); box-shadow: 0 0 0 var(--lake-deep); }
+  .btn-ghost {
+    display: flex; align-items: center; justify-content: center;
+    height: 50px; border-radius: 12px; cursor: pointer;
+    background: transparent; border: 1px solid rgba(139,111,71,.4);
+    color: var(--lake); font-size: 15px; letter-spacing: .12em; font-weight: 600;
+  }
+
+  /* ============ 屏 1 · 主页 ============ */
+  .home-title {
+    font-family: var(--serif); font-weight: 600;
+    font-size: 25px; line-height: 1.5; letter-spacing: .04em;
+    margin: 22px 0 4px;
+  }
+  .home-sub { font-size: 12px; color: var(--fog); letter-spacing: .08em; margin-bottom: 24px; }
+
+  .input-wrap {
+    background: var(--page); border: 1px solid rgba(139,111,71,.28);
+    border-radius: 14px; padding: 14px 16px 18px;
+    box-shadow: 0 1px 0 rgba(139,111,71,.12);
+  }
+  .input-wrap textarea {
+    width: 100%; height: 64px; border: none; outline: none; resize: none;
+    background: transparent; font-family: var(--sans); font-size: 14px;
+    color: var(--ink); line-height: 1.7;
+  }
+  .input-wrap textarea::placeholder { color: #A9B4AB; }
+  .input-meta { display: flex; justify-content: space-between; font-size: 10px; color: #A9B4AB; }
+
+  .divider {
+    display: flex; align-items: center; gap: 12px;
+    margin: 26px 0 14px; color: #9AA69D; font-size: 11px; letter-spacing: .2em;
+  }
+  .divider::before, .divider::after { content:''; flex:1; height:1px; background: rgba(139,111,71,.25); }
+
+  .topic-card {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 13px 16px; margin-bottom: 10px; cursor: pointer;
+    transition: border-color .15s ease;
+  }
+  .topic-card:hover { border-color: rgba(58,107,92,.5); }
+  .topic-card .t { font-size: 13.5px; font-weight: 600; }
+  .topic-card .tag {
+    font-size: 10px; color: var(--wood); border: 1px solid rgba(139,111,71,.4);
+    border-radius: 999px; padding: 2px 9px; letter-spacing: .08em; flex-shrink: 0;
+  }
+
+  /* ============ 屏 2 · 生成中 ============ */
+  .loading-center {
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding-bottom: 60px;
+  }
+  .ripple-stage { position: relative; width: 140px; height: 140px; margin-bottom: 30px; }
+  .ripple {
+    position: absolute; inset: 0; border-radius: 50%;
+    border: 1.5px solid var(--lake);
+    animation: ripple 2.6s cubic-bezier(.2,.6,.3,1) infinite;
+    opacity: 0;
+  }
+  .ripple:nth-child(2) { animation-delay: .9s; }
+  .ripple:nth-child(3) { animation-delay: 1.8s; }
+  .ripple-core {
+    position: absolute; inset: 42px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #5C8A78, var(--lake) 70%);
+    box-shadow: 0 6px 18px rgba(58,107,92,.35);
+  }
+  @keyframes ripple {
+    0% { transform: scale(.35); opacity: 0; }
+    25% { opacity: .7; }
+    100% { transform: scale(1.15); opacity: 0; }
+  }
+  .loading-text {
+    font-family: var(--serif); font-size: 17px; letter-spacing: .1em;
+    color: var(--lake); min-height: 30px; text-align: center;
+    transition: opacity .4s ease;
+  }
+  .loading-hint { font-size: 11px; color: var(--fog); letter-spacing: .18em; margin-top: 10px; }
+
+  /* ============ 屏 3/4/5 · 答题 ============ */
+  .quiz-top { display: flex; align-items: center; justify-content: space-between; margin: 6px 0 14px; }
+  .quiz-top .count { font-family: var(--serif); font-size: 12px; color: var(--fog); letter-spacing: .08em; }
+  .type-tag {
+    font-size: 10px; color: var(--lake); border: 1px solid rgba(58,107,92,.45);
+    border-radius: 999px; padding: 2px 10px; letter-spacing: .1em;
+  }
+  /* 湖畔小径进度：胶囊轨道 + 石子节点 */
+  .trail { display: flex; align-items: center; gap: 6px; margin-bottom: 22px; }
+  .trail .node {
+    flex: 1; height: 6px; border-radius: 999px;
+    background: rgba(139,111,71,.18);
+  }
+  .trail .node.done { background: var(--lake); }
+  .trail .node.current { background: var(--mist); }
+  .trail .stone {
+    width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0;
+    background: var(--page); border: 2px solid rgba(139,111,71,.4);
+  }
+  .trail .stone.done { background: var(--lake); border-color: var(--lake); }
+  .trail .stone.current { background: var(--mist); border-color: var(--mist); }
+
+  .question { font-family: var(--serif); font-size: 18px; line-height: 1.75; font-weight: 600; margin-bottom: 16px; }
+
+  .option {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 11px 12px; margin-bottom: 8px; border-radius: 12px;
+    background: var(--page); border: 1px solid rgba(139,111,71,.18);
+    cursor: pointer; transition: border-color .15s ease, transform .1s ease;
+  }
+  .option:hover { border-color: rgba(58,107,92,.5); }
+  .option .key {
+    width: 24px; height: 24px; border-radius: 8px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--serif); font-size: 12px; color: var(--wood);
+    border: 1px solid rgba(139,111,71,.35); background: #FAF6EC;
+  }
+  .option .txt { font-size: 13.5px; line-height: 1.65; padding-top: 2px; }
+
+  /* 作答后状态 */
+  .option.right {
+    background: #EAF2EC; border-color: var(--moss);
+  }
+  .option.right .key { background: var(--moss); border-color: var(--moss); color: #FBF8EF; }
+  .option.wrong {
+    background: #F6ECE8; border-color: var(--maple);
+  }
+  .option.wrong .key { background: var(--maple); border-color: var(--maple); color: #FBF8EF; }
+  .option.dim { opacity: .55; }
+
+  .verdict { display: flex; align-items: center; gap: 8px; margin: 2px 0 10px; }
+  .verdict .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .verdict .t { font-family: var(--serif); font-size: 15px; font-weight: 600; letter-spacing: .1em; }
+  .verdict.right .dot { background: var(--moss); }
+  .verdict.right .t { color: var(--moss); }
+  .verdict.wrong .dot { background: var(--maple); }
+  .verdict.wrong .t { color: var(--maple); }
+
+  .explain {
+    padding: 14px 16px; margin-top: 4px;
+    background: var(--page); border-left: 3px solid var(--wood);
+    border-radius: 6px 14px 14px 6px;
+    box-shadow: 0 1px 0 rgba(139,111,71,.1);
+  }
+  .explain .h { font-size: 11px; color: var(--wood); letter-spacing: .25em; margin-bottom: 7px; }
+  .explain .p { font-size: 12px; line-height: 1.7; color: #4A5650; }
+  .explain .kp {
+    display: inline-block; margin-top: 10px; font-size: 10px; color: var(--lake);
+    border: 1px solid rgba(58,107,92,.4); border-radius: 999px; padding: 2px 10px;
+  }
+
+  /* ============ 屏 6 · 报告 ============ */
+  .report-head { display: flex; align-items: center; gap: 20px; margin: 18px 0 20px; }
+  .ring {
+    --p: 80;
+    width: 92px; height: 92px; border-radius: 50%; flex-shrink: 0;
+    background: conic-gradient(var(--lake) calc(var(--p)*1%), rgba(139,111,71,.15) 0);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .ring .inner {
+    width: 70px; height: 70px; border-radius: 50%; background: var(--paper);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  .ring .num { font-family: var(--serif); font-size: 22px; font-weight: 600; color: var(--lake); }
+  .ring .lbl { font-size: 9px; color: var(--fog); letter-spacing: .15em; }
+  .report-head .meta .stamp {
+    font-family: var(--serif); font-size: 19px; font-weight: 600; letter-spacing: .06em;
+  }
+  .report-head .meta .sub { font-size: 11px; color: var(--fog); margin-top: 6px; letter-spacing: .06em; }
+
+  .sec-h { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--wood); letter-spacing: .22em; margin: 18px 0 10px; }
+  .sec-h::after { content:''; flex:1; height:1px; background: rgba(139,111,71,.22); }
+
+  .summary { padding: 14px 16px; font-size: 12.5px; line-height: 1.9; color: #4A5650; }
+
+  .mastery { margin-bottom: 9px; }
+  .mastery .row { display: flex; align-items: center; gap: 10px; margin-bottom: 9px; }
+  .mastery .kp { width: 72px; font-size: 11.5px; font-weight: 600; flex-shrink: 0; }
+  .mastery .bar { flex: 1; height: 8px; border-radius: 999px; background: rgba(139,111,71,.14); overflow: hidden; }
+  .mastery .fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--mist), var(--lake)); }
+  .mastery .pct { width: 30px; text-align: right; font-family: var(--serif); font-size: 11px; color: var(--fog); }
+
+  .suggest { padding: 13px 16px; font-size: 12.5px; line-height: 1.8; color: #4A5650; }
+  .suggest .n { font-family: var(--serif); color: var(--wood); margin-right: 6px; }
+
+  .quote-card {
+    position: relative; padding: 18px 18px 14px; margin: 16px 0 18px;
+    background: var(--page); border-radius: 16px; overflow: hidden;
+    border: 1px solid rgba(217,164,65,.35);
+  }
+  .quote-card::before {
+    content:''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+    background: linear-gradient(180deg, var(--dawn), transparent);
+  }
+  .quote-card .q { font-family: var(--serif); font-size: 16.5px; line-height: 1.9; font-weight: 600; }
+  .quote-card .from { font-size: 11px; color: var(--wood); margin-top: 10px; letter-spacing: .12em; }
+
+  .btn-row { display: flex; gap: 10px; margin-top: auto; }
+  .btn-row .btn-primary { flex: 1.2; }
+  .btn-row .btn-ghost { flex: 1; }
+
+  /* ============ 屏 7 · 海报 ============ */
+  .poster-stage { flex: 1; display: flex; align-items: center; justify-content: center; }
+  .poster {
+    width: 262px; padding: 26px 24px 20px;
+    background: linear-gradient(180deg, #2E4B3F 0%, #23402F 70%, #1B3328 100%);
+    border-radius: 18px; color: #F2EDDD; position: relative; overflow: hidden;
+    box-shadow: 0 18px 40px rgba(20,35,28,.5);
+  }
+  .poster .brand { font-size: 10px; letter-spacing: .4em; color: var(--mist); }
+  .poster .pq {
+    font-family: var(--serif); font-size: 19px; line-height: 2; font-weight: 600;
+    margin: 20px 0 8px; letter-spacing: .04em;
+  }
+  .poster .pfrom { font-size: 11px; color: #B9C9BF; letter-spacing: .15em; margin-bottom: 18px; }
+  .poster .qrcode {
+    width: 74px; height: 74px; margin: 14px auto 10px;
+    background:
+      conic-gradient(#F2EDDD 0 25%, transparent 0 50%, #F2EDDD 0 75%, transparent 0) 0 0/20px 20px,
+      conic-gradient(#F2EDDD 0 25%, transparent 0) 0 0/20px 20px;
+    opacity: .9; border-radius: 4px; border: 6px solid #F2EDDD;
+  }
+  .poster .pscan { text-align: center; font-size: 9px; color: #B9C9BF; letter-spacing: .25em; }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <div class="kicker">AI 闯关学习小程序 · 网页原型</div>
+  <h1>核心业务流程</h1>
+  <p>风格：湖畔手账 —— 灵感来自《瓦尔登湖》· 输入 → 出题 → 答题 → 复盘 → 分享</p>
+  <div class="rule"></div>
+</header>
+
+<main class="gallery">
+
+  <!-- ① 主页 -->
+  <figure class="screen">
+    <div class="phone">
+      <div class="statusbar"><span>4:58</span><span class="capsule"><i></i><i></i><i></i></span></div>
+      <div class="body">
+        <div class="chapter">CHAP. 01 · 湖畔</div>
+        <h2 class="home-title">今日，想探索哪片<br>知识的林间小径？</h2>
+        <p class="home-sub">输入一句话 / 一段文字，AI 为你铺就 5 道闯关之题</p>
+
+        <div class="input-wrap">
+          <textarea placeholder="输入想学的知识，如：光的波粒二象性"></textarea>
+          <div class="input-meta"><span>最多 2000 字</span><span>0 / 2000</span></div>
+        </div>
+
+        <button class="btn-primary" style="margin-top:16px">开始漫步 <span style="font-family:var(--serif)">→</span></button>
+
+        <div class="divider">或沿旧径重游</div>
+
+        <div class="topic-card card"><span class="t">光的波粒二象性</span><span class="tag">物理学</span></div>
+        <div class="topic-card card"><span class="t">光合作用的全过程</span><span class="tag">生物学</span></div>
+        <div class="topic-card card"><span class="t">瓦尔登湖与超验主义</span><span class="tag">文学</span></div>
+
+        <svg class="waves" viewBox="0 0 300 10" preserveAspectRatio="none" style="margin-top:auto">
+          <path d="M0 5 Q 10 2 20 5 T 40 5 T 60 5 T 80 5 T 100 5 T 120 5 T 140 5 T 160 5 T 180 5 T 200 5 T 220 5 T 240 5 T 260 5 T 280 5 T 300 5" fill="none" stroke="#8B6F47" stroke-width="1"/>
+        </svg>
+      </div>
+    </div>
+    <figcaption><span class="no">01</span><span class="name">主页 · 输入</span><span class="note">极简单输入框 + 示例主题卡片（可点击直达），"开始漫步"触发出题</span></figcaption>
+  </figure>
+
+  <!-- ② 生成中 -->
+  <figure class="screen">
+    <div class="phone">
+      <div class="statusbar"><span>4:59</span><span class="capsule"><i></i><i></i><i></i></span></div>
+      <div class="body">
+        <div class="chapter">CHAP. 02 · 雾散</div>
+        <div class="loading-center">
+          <div class="ripple-stage">
+            <div class="ripple"></div>
+            <div class="ripple"></div>
+            <div class="ripple"></div>
+            <div class="ripple-core"></div>
+          </div>
+          <div class="loading-text" id="loading-text">晨雾散开，题目浮现…</div>
+          <div class="loading-hint">正在铺就 5 道考题 · 约 15 秒</div>
+        </div>
+        <svg class="waves" viewBox="0 0 300 10" preserveAspectRatio="none">
+          <path d="M0 5 Q 10 2 20 5 T 40 5 T 60 5 T 80 5 T 100 5 T 120 5 T 140 5 T 160 5 T 180 5 T 200 5 T 220 5 T 240 5 T 260 5 T 280 5 T 300 5" fill="none" stroke="#8B6F47" stroke-width="1"/>
+        </svg>
+      </div>
+    </div>
+    <figcaption><span class="no">02</span><span class="name">生成中 · Loading</span><span class="note">湖水涟漪扩散动画 + 轮播趣味文案（晨雾散开/拾取松果/炉火微温），缓解 10~30s 等待焦虑</span></figcaption>
+  </figure>
+
+  <!-- ③ 答题未作答 -->
+  <figure class="screen">
+    <div class="phone">
+      <div class="statusbar"><span>5:00</span><span class="capsule"><i></i><i></i><i></i></span></div>
+      <div class="body">
+        <div class="quiz-top">
+          <span class="count">第 1 题 / 共 5 题</span>
+          <span class="type-tag">单选题</span>
+        </div>
+        <div class="trail">
+          <span class="stone current"></span><span class="node current"></span>
+          <span class="stone"></span><span class="node"></span>
+          <span class="stone"></span><span class="node"></span>
+          <span class="stone"></span><span class="node"></span>
+          <span class="stone"></span>
+        </div>
+
+        <p class="question">光在传播过程中表现出干涉和衍射现象，这说明光具有什么性质？</p>
+
+        <div class="option"><span class="key">A</span><span class="txt">粒子性</span></div>
+        <div class="option"><span class="key">B</span><span class="txt">波动性</span></div>
+        <div class="option"><span class="key">C</span><span class="txt">同时具有波动性和粒子性</span></div>
+        <div class="option"><span class="key">D</span><span class="txt">既无波动性也无粒子性</span></div>
+
+        <svg class="waves" viewBox="0 0 300 10" preserveAspectRatio="none" style="margin-top:auto">
+          <path d="M0 5 Q 10 2 20 5 T 40 5 T 60 5 T 80 5 T 100 5 T 120 5 T 140 5 T 160 5 T 180 5 T 200 5 T 220 5 T 240 5 T 260 5 T 280 5 T 300 5" fill="none" stroke="#8B6F47" stroke-width="1"/>
+        </svg>
+      </div>
+    </div>
+    <figcaption><span class="no">03</span><span class="name">闯关 · 未作答</span><span class="note">顶部"湖畔小径"进度（5 个石子节点）+ 题型标签；题干衬线大字，选项纸页卡片</span></figcaption>
+  </figure>
+
+  <!-- ④ 答对 -->
+  <figure class="screen">
+    <div class="phone">
+      <div class="statusbar"><span>5:01</span><span class="capsule"><i></i><i></i><i></i></span></div>
+      <div class="body">
+        <div class="quiz-top">
+          <span class="count">第 2 题 / 共 5 题</span>
+          <span class="type-tag">单选题</span>
+        </div>
+        <div class="trail">
+          <span class="stone done"></span><span class="node done"></span>
+          <span class="stone current"></span><span class="node current"></span>
+          <span class="stone"></span><span class="node"></span>
+          <span class="stone"></span><span class="node"></span>
+          <span class="stone"></span>
+        </div>
+
+        <p class="question">双缝干涉实验中，明条纹处两列光波满足什么条件？</p>
+
+        <div class="option dim"><span class="key">A</span><span class="txt">光程差为零</span></div>
+        <div class="option right"><span class="key">B</span><span class="txt">光程差为波长的整数倍 ✓</span></div>
+        <div class="option dim"><span class="key">C</span><span class="txt">光程差为半波长的奇数倍</span></div>
+        <div class="option dim"><span class="key">D</span><span class="txt">与光程差无关</span></div>
+
+        <div class="verdict right"><span class="dot"></span><span class="t">答对了 · 涟漪泛起</span></div>
+
+        <div class="explain">
+          <div class="h">知识讲解</div>
+          <p class="p">干涉相长（明条纹）出现在两列波的光程差为波长整数倍的位置，此时振动叠加增强。若为半波长的奇数倍则相互抵消形成暗条纹——这是双缝干涉的核心判据，也是考试高频易错点。</p>
+          <span class="kp">知识点 · 光的干涉</span>
+        </div>
+
+        <button class="btn-primary" style="margin-top:auto">下一题 <span style="font-family:var(--serif)">→</span></button>
+      </div>
+    </div>
+    <figcaption><span class="no">04</span><span class="name">答题反馈 · 答对</span><span class="note">苔绿高亮 + ✓，文案"涟漪泛起"呼应湖水意象；讲解卡纸页质感 + 知识点标签，即时巩固</span></figcaption>
+  </figure>
+
+  <!-- ⑤ 答错 -->
+  <figure class="screen">
+    <div class="phone">
+      <div class="statusbar"><span>5:01</span><span class="capsule"><i></i><i></i><i></i></span></div>
+      <div class="body">
+        <div class="quiz-top">
+          <span class="count">第 3 题 / 共 5 题</span>
+          <span class="type-tag">判断题</span>
+        </div>
+        <div class="trail">
+          <span class="stone done"></span><span class="node done"></span>
+          <span class="stone done"></span><span class="node done"></span>
+          <span class="stone current"></span><span class="node current"></span>
+          <span class="stone"></span><span class="node"></span>
+          <span class="stone"></span>
+        </div>
+
+        <p class="question">光电效应实验中，光电子能否逸出只取决于光的强度，与频率无关。</p>
+
+        <div class="option wrong"><span class="key">A</span><span class="txt">正确 ✗</span></div>
+        <div class="option right"><span class="key">B</span><span class="txt">错误 ✓</span></div>
+
+        <div class="verdict wrong"><span class="dot"></span><span class="t">这条小径，值得再走一遍</span></div>
+
+        <div class="explain">
+          <div class="h">知识讲解</div>
+          <p class="p">光电效应中，光电子能否逸出取决于入射光的频率是否高于金属的截止频率（频率足够高，再弱的光也能逸出）；光的强度只影响逸出电子的数量。爱因斯坦因光电效应方程获诺贝尔奖，这一条必须记牢。</p>
+          <span class="kp">知识点 · 光电效应</span>
+        </div>
+
+        <button class="btn-primary" style="margin-top:auto">下一题 <span style="font-family:var(--serif)">→</span></button>
+      </div>
+    </div>
+    <figcaption><span class="no">05</span><span class="name">答题反馈 · 答错</span><span class="note">错误选项枫红棕 ✗，正确选项苔绿揭示；文案"值得再走一遍"暗示 P1 错题重练，答错也有深度讲解</span></figcaption>
+  </figure>
+
+  <!-- ⑥ 报告 -->
+  <figure class="screen">
+    <div class="phone">
+      <div class="statusbar"><span>5:03</span><span class="capsule"><i></i><i></i><i></i></span></div>
+      <div class="body">
+        <div class="chapter">CHAP. 03 · 归程</div>
+
+        <div class="report-head">
+          <div class="ring" style="--p:80">
+            <div class="inner"><span class="num">80%</span><span class="lbl">正确率</span></div>
+          </div>
+          <div class="meta">
+            <div class="stamp">湖畔漫步完成</div>
+            <div class="sub">答对 4 / 5 题 · 用时 3 分 12 秒</div>
+          </div>
+        </div>
+
+        <div class="sec-h">知识总结</div>
+        <div class="summary card">光的本质之争贯穿物理学史：从牛顿的微粒说到惠更斯的波动说，再到爱因斯坦的光量子假说——光兼具波动性与粒子性（波粒二象性）。干涉、衍射体现波动性；光电效应体现粒子性。二者随观察方式互补，而非矛盾。</div>
+
+        <div class="sec-h">掌握度</div>
+        <div class="mastery">
+          <div class="row"><span class="kp">光的本性</span><div class="bar"><div class="fill" style="width:90%"></div></div><span class="pct">90%</span></div>
+          <div class="row"><span class="kp">干涉衍射</span><div class="bar"><div class="fill" style="width:85%"></div></div><span class="pct">85%</span></div>
+          <div class="row"><span class="kp">光电效应</span><div class="bar"><div class="fill" style="width:45%"></div></div><span class="pct">45%</span></div>
+        </div>
+
+        <div class="sec-h">下一步</div>
+        <div class="suggest card"><span class="n">壹</span>重温光电效应的截止频率概念，理解"强度"与"频率"的分工；<br><span class="n">贰</span>结合爱因斯坦光子说，练习 3 道光电效应计算题。</div>
+
+        <div class="quote-card">
+          <div class="q">"唯有我们觉醒之际，天才会破晓。"</div>
+          <div class="from">—— 亨利·梭罗《瓦尔登湖》</div>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn-primary">生成分享海报</button>
+          <button class="btn-ghost">再闯一关</button>
+        </div>
+      </div>
+    </div>
+    <figcaption><span class="no">06</span><span class="name">复盘报告</span><span class="note">正确率环形图 + 知识总结 + 逐知识点掌握度条（答错知识点显著偏低）+ 可执行建议 + 金句卡</span></figcaption>
+  </figure>
+
+  <!-- ⑦ 海报 -->
+  <figure class="screen">
+    <div class="phone">
+      <div class="statusbar"><span>5:04</span><span class="capsule"><i></i><i></i><i></i></span></div>
+      <div class="body">
+        <div class="chapter">CHAP. 04 · 分享</div>
+        <div class="poster-stage">
+          <div class="poster">
+            <div class="brand">AI 闯关学习</div>
+            <svg viewBox="0 0 262 26" style="margin-top:10px">
+              <path d="M0 13 Q 20 6 40 13 T 80 13 T 120 13 T 160 13 T 200 13 T 240 13 T 262 13" fill="none" stroke="#A8C4B8" stroke-width="1" opacity=".6"/>
+            </svg>
+            <div class="pq">"大部分时间里，<br>寂寞是有益于健康的。"</div>
+            <div class="pfrom">—— 来自「光的波粒二象性」闯关 · 正确率 80%</div>
+            <div class="qrcode"></div>
+            <div class="pscan">扫码与我一起漫步湖畔</div>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn-primary">保存到相册</button>
+          <button class="btn-ghost">转发给好友</button>
+        </div>
+      </div>
+    </div>
+    <figcaption><span class="no">07</span><span class="name">分享海报</span><span class="note">深湖绿底 + 金句衬线大字 + 水波纹 + 小程序码占位（上线后替换为真实码），保存相册/转发</span></figcaption>
+  </figure>
+
+</main>
+
+<script>
+  // 生成中文案轮播（演示）
+  (function () {
+    var el = document.getElementById('loading-text');
+    if (!el) return;
+    var lines = [
+      '晨雾散开，题目浮现…',
+      '沿湖畔小径，拾取知识的松果…',
+      '炉火微温，正在整理你的考题…',
+      '听见了吗，那是题目涉水而来的声音…'
+    ];
+    var i = 0;
+    setInterval(function () {
+      i = (i + 1) % lines.length;
+      el.style.opacity = '0';
+      setTimeout(function () { el.textContent = lines[i]; el.style.opacity = '1'; }, 400);
+    }, 2800);
+  })();
+</script>
+
+</body>
+</html>

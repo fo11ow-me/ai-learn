@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 闯关学习 · 扩展功能原型（P1-P3）</title>
+<style>
+  /* ============ 湖畔手账 · 设计系统（与 01-core-flow 一致） ============ */
+  :root {
+    --paper: #F7F4ED;
+    --page: #FFFDF8;
+    --lake: #3A6B5C;
+    --lake-deep: #2C4A3E;
+    --mist: #A8C4B8;
+    --wood: #8B6F47;
+    --ink: #2C3A33;
+    --fog: #6B7A72;
+    --moss: #4E7D5E;
+    --maple: #B3594C;
+    --dawn: #D9A441;
+    --serif: 'Noto Serif SC','Songti SC','STSong','SimSun',Georgia,serif;
+    --sans: 'PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #1E2B25;
+    background-image:
+      radial-gradient(ellipse 80% 50% at 50% -10%, rgba(168,196,184,.12), transparent),
+      radial-gradient(ellipse 60% 40% at 90% 110%, rgba(139,111,71,.10), transparent);
+    font-family: var(--sans);
+    color: #E8E4D8;
+    min-height: 100vh;
+    padding: 48px 24px 72px;
+  }
+
+  .doc-head { max-width: 1200px; margin: 0 auto 40px; text-align: center; }
+  .doc-head .kicker {
+    font-family: var(--serif); font-size: 13px; letter-spacing: .45em;
+    color: var(--mist); text-transform: uppercase;
+  }
+  .doc-head h1 {
+    font-family: var(--serif); font-weight: 600;
+    font-size: 34px; letter-spacing: .08em; color: #F5F1E6; margin: 12px 0 10px;
+  }
+  .doc-head p { color: #9DB0A6; font-size: 14px; letter-spacing: .05em; }
+  .doc-head .rule { width: 56px; height: 2px; background: var(--dawn); margin: 20px auto 0; border-radius: 1px; }
+
+  .gallery {
+    max-width: 1200px; margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 44px 36px;
+    justify-items: center;
+  }
+  @media (max-width: 1100px) { .gallery { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+  @media (max-width: 720px)  { .gallery { grid-template-columns: 1fr; } }
+
+  .screen {
+    width: 100%; max-width: 340px;
+    opacity: 0; transform: translateY(18px);
+    animation: rise .7s cubic-bezier(.22,.75,.3,1) forwards;
+  }
+  .screen:nth-child(2) { animation-delay: .08s; }
+  .screen:nth-child(3) { animation-delay: .16s; }
+  .screen:nth-child(4) { animation-delay: .24s; }
+  .screen:nth-child(5) { animation-delay: .32s; }
+  .screen:nth-child(6) { animation-delay: .40s; }
+  @keyframes rise { to { opacity: 1; transform: none; } }
+
+  .screen figcaption { margin-top: 14px; text-align: center; }
+  .screen figcaption .no {
+    display: inline-block; font-family: var(--serif); font-size: 12px;
+    color: #1E2B25; background: var(--mist); border-radius: 3px;
+    padding: 1px 8px; margin-right: 8px; letter-spacing: .1em;
+  }
+  .screen figcaption .name { font-family: var(--serif); font-size: 16px; color: #F0ECDF; letter-spacing: .06em; }
+  .screen figcaption .note { display: block; font-size: 12px; color: #879A8F; margin-top: 5px; line-height: 1.6; }
+
+  .phone {
+    position: relative;
+    width: 340px; height: 736px;
+    background: var(--paper);
+    border-radius: 32px;
+    border: 1px solid rgba(168,196,184,.35);
+    box-shadow:
+      0 24px 60px rgba(0,0,0,.45),
+      0 2px 0 rgba(245,241,230,.06) inset;
+    overflow: hidden;
+    color: var(--ink);
+    display: flex; flex-direction: column;
+  }
+  .phone::before {
+    content:''; position: absolute; inset: 0; pointer-events: none; z-index: 1;
+    background: repeating-linear-gradient(0deg, transparent 0 3px, rgba(139,111,71,.015) 3px 4px);
+  }
+  .statusbar {
+    position: relative; z-index: 2;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 22px 8px; font-size: 11px; font-weight: 600; color: var(--fog);
+  }
+  .statusbar .capsule {
+    width: 66px; height: 22px; border-radius: 11px;
+    border: 1px solid rgba(139,111,71,.35);
+    display: flex; align-items: center; justify-content: center; gap: 4px;
+  }
+  .statusbar .capsule i { width: 3px; height: 3px; border-radius: 50%; background: var(--fog); }
+
+  .body { position: relative; z-index: 2; flex: 1; padding: 8px 22px 24px; display: flex; flex-direction: column; overflow-y: auto; scrollbar-width: none; }
+  .body::-webkit-scrollbar { display: none; }
+  .chapter { font-family: var(--serif); font-size: 11px; letter-spacing: .35em; color: var(--wood); text-transform: uppercase; }
+  .card {
+    background: var(--page);
+    border: 1px solid rgba(139,111,71,.16);
+    border-radius: 16px;
+    box-shadow: 0 1px 0 rgba(139,111,71,.10), 0 6px 18px rgba(44,58,51,.05);
+  }
+  .btn-primary {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    height: 50px; border-radius: 12px; border: none; cursor: pointer;
+    background: var(--lake); color: #FBF8EF;
+    font-size: 15px; font-weight: 600; letter-spacing: .12em;
+    box-shadow: 0 3px 0 var(--lake-deep);
+    transition: transform .12s ease, box-shadow .12s ease;
+  }
+  .btn-primary:active { transform: translateY(3px); box-shadow: 0 0 0 var(--lake-deep); }
+  .sec-h { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--wood); letter-spacing: .22em; margin: 12px 0 8px; }
+  .sec-h::after { content:''; flex:1; height:1px; background: rgba(139,111,71,.22); }
+
+  /* ---------- 屏 1 · 个人中心分析 ---------- */
+  .profile { display: flex; align-items: center; gap: 14px; margin: 14px 0 6px; }
+  .avatar {
+    width: 52px; height: 52px; border-radius: 50%; flex-shrink: 0;
+    background: radial-gradient(circle at 32% 28%, #5C8A78, var(--lake) 75%);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--serif); font-size: 18px; color: #FBF8EF;
+    box-shadow: 0 2px 0 var(--lake-deep);
+  }
+  .profile .name { font-family: var(--serif); font-size: 17px; font-weight: 600; }
+  .profile .sub { font-size: 11px; color: var(--fog); margin-top: 4px; letter-spacing: .05em; }
+
+  .stats-row { display: flex; gap: 10px; margin-top: 14px; }
+  .stat {
+    flex: 1; padding: 12px 10px; text-align: center;
+  }
+  .stat .v { font-family: var(--serif); font-size: 19px; font-weight: 600; color: var(--lake); }
+  .stat .l { font-size: 10px; color: var(--fog); margin-top: 4px; letter-spacing: .12em; }
+
+  .chart { padding: 14px 14px 6px; }
+  .chart .bars { display: flex; align-items: flex-end; gap: 9px; height: 84px; padding: 0 4px; }
+  .chart .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; height: 100%; justify-content: flex-end; }
+  .chart .bar {
+    width: 100%; border-radius: 5px 5px 2px 2px;
+    background: linear-gradient(180deg, var(--mist), var(--lake));
+  }
+  .chart .bar.today { background: linear-gradient(180deg, var(--dawn), #B08330); }
+  .chart .d { font-size: 9px; color: var(--fog); }
+  .chart .legend { display: flex; justify-content: center; gap: 14px; font-size: 9.5px; color: var(--fog); padding: 8px 0 4px; }
+  .chart .legend i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
+
+  .tree { padding: 12px 14px; display: flex; align-items: center; gap: 10px; }
+  .tree .branches { flex-shrink: 0; }
+  .tree .leaves { flex: 1; display: flex; flex-wrap: wrap; gap: 6px; }
+  .leaf {
+    font-size: 10px; color: var(--lake); border: 1px solid rgba(58,107,92,.4);
+    background: #F2F6F1; border-radius: 999px; padding: 3px 10px;
+  }
+  .leaf.core { background: var(--lake); color: #FBF8EF; border-color: var(--lake); }
+
+  /* ---------- 屏 2 · 错题本 ---------- */
+  .review-banner {
+    display: flex; align-items: center; gap: 12px;
+    padding: 13px 15px; margin-top: 14px;
+    background: linear-gradient(90deg, #F4EEE0, #FBF6EA);
+    border: 1px solid rgba(217,164,65,.4); border-radius: 14px;
+  }
+  .review-banner .bell {
+    width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
+    background: var(--dawn); color: #fff; display: flex; align-items: center; justify-content: center;
+    font-family: var(--serif); font-size: 15px;
+  }
+  .review-banner .t { font-size: 12.5px; font-weight: 600; }
+  .review-banner .s { font-size: 10.5px; color: var(--wood); margin-top: 3px; }
+  .review-banner .go { margin-left: auto; font-size: 11px; color: var(--lake); font-weight: 600; white-space: nowrap; }
+
+  .mistake-card { padding: 13px 15px; margin-bottom: 10px; }
+  .mistake-card .q { font-size: 12.5px; font-weight: 600; line-height: 1.6; }
+  .mistake-card .meta { display: flex; align-items: center; gap: 8px; margin-top: 9px; flex-wrap: wrap; }
+  .mistake-card .kp {
+    font-size: 9.5px; color: var(--lake); border: 1px solid rgba(58,107,92,.4);
+    border-radius: 999px; padding: 2px 9px;
+  }
+  .mistake-card .when { font-size: 10px; color: var(--maple); margin-left: auto; }
+
+  /* ---------- 屏 3 · 多格式输入 ---------- */
+  .source-card {
+    display: flex; align-items: center; gap: 14px;
+    padding: 15px 16px; margin-bottom: 11px; cursor: pointer;
+    transition: border-color .15s ease;
+  }
+  .source-card:hover { border-color: rgba(58,107,92,.5); }
+  .source-card .ico {
+    width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--serif); font-size: 14px; color: #FBF8EF;
+    background: var(--lake); box-shadow: 0 2px 0 var(--lake-deep);
+  }
+  .source-card.wood .ico { background: var(--wood); box-shadow: 0 2px 0 #6E5636; }
+  .source-card.dawn .ico { background: var(--dawn); box-shadow: 0 2px 0 #B08330; }
+  .source-card .t { font-size: 13.5px; font-weight: 600; }
+  .source-card .s { font-size: 10.5px; color: var(--fog); margin-top: 3px; }
+
+  .recent { padding: 12px 15px; font-size: 12px; }
+  .recent .row { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed rgba(139,111,71,.2); }
+  .recent .row:last-child { border-bottom: none; }
+  .recent .f { color: var(--ink); }
+  .recent .s { font-size: 10px; color: var(--fog); }
+  .recent .ok { font-size: 10px; color: var(--moss); }
+
+  /* ---------- 屏 4 · PK 对战 ---------- */
+  .pk-arena { text-align: center; margin-top: 14px; }
+  .pk-title { font-family: var(--serif); font-size: 15px; letter-spacing: .2em; color: var(--wood); }
+  .pk-players { display: flex; align-items: stretch; gap: 8px; margin: 12px 0 6px; }
+  .pk-player {
+    flex: 1; padding: 14px 10px; text-align: center;
+  }
+  .pk-player .mini-avatar {
+    width: 38px; height: 38px; border-radius: 50%; margin: 0 auto 6px;
+    background: radial-gradient(circle at 32% 28%, #5C8A78, var(--lake) 75%);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--serif); font-size: 15px; color: #FBF8EF;
+  }
+  .pk-player.opp .mini-avatar { background: radial-gradient(circle at 32% 28%, #A5856B, var(--wood) 75%); }
+  .pk-player .pn { font-size: 12px; font-weight: 600; }
+  .pk-player .rank { font-size: 10px; color: var(--wood); margin-top: 4px; letter-spacing: .06em; }
+  .pk-player .score { font-family: var(--serif); font-size: 24px; font-weight: 600; color: var(--lake); margin: 4px 0 8px; }
+  .pk-match-tag {
+    display: inline-block; margin: 10px auto 0; font-size: 10px; color: var(--lake);
+    border: 1px solid rgba(58,107,92,.45); border-radius: 999px; padding: 2px 10px; letter-spacing: .1em;
+  }
+  .pk-player .bar { height: 8px; border-radius: 999px; background: rgba(139,111,71,.14); overflow: hidden; }
+  .pk-player .fill { height: 100%; background: var(--lake); border-radius: 999px; }
+  .pk-vs {
+    align-self: center; font-family: var(--serif); font-size: 16px; font-weight: 600;
+    color: var(--maple); letter-spacing: .1em;
+  }
+  .pk-question {
+    padding: 14px 16px; margin-top: 10px; text-align: left;
+  }
+  .pk-question .q { font-family: var(--serif); font-size: 14px; line-height: 1.7; font-weight: 600; }
+  .pk-question .timer {
+    display: inline-block; margin-top: 10px; font-size: 10px; color: var(--maple);
+    border: 1px solid rgba(179,89,76,.45); border-radius: 999px; padding: 2px 10px; letter-spacing: .1em;
+  }
+
+  /* ---------- 屏 5 · 排行榜 ---------- */
+  .rank-tabs { display: flex; gap: 8px; margin: 14px 0 12px; }
+  .rank-tab {
+    flex: 1; text-align: center; font-size: 11.5px; padding: 8px 0; border-radius: 999px;
+    color: var(--fog); border: 1px solid rgba(139,111,71,.3); cursor: pointer; letter-spacing: .06em;
+  }
+  .rank-tab.on { background: var(--lake); color: #FBF8EF; border-color: var(--lake); }
+
+  .rank-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 14px; margin-bottom: 9px;
+  }
+  .rank-item .no {
+    width: 26px; text-align: center; font-family: var(--serif);
+    font-size: 15px; font-weight: 600; color: var(--wood); flex-shrink: 0;
+  }
+  .rank-item.top .no { color: var(--dawn); }
+  .rank-item .badge {
+    width: 20px; height: 20px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: 10px;
+    background: #F4E7C8; border: 1px solid rgba(217,164,65,.5);
+  }
+  .rank-item .info { flex: 1; min-width: 0; }
+  .rank-item .n { font-size: 12.5px; font-weight: 600; }
+  .rank-item .s { font-size: 10px; color: var(--fog); margin-top: 2px; }
+  .rank-item .pts { font-family: var(--serif); font-size: 14px; font-weight: 600; color: var(--lake); }
+  .rank-item.me { border-color: rgba(58,107,92,.5); background: #F0F5F0; }
+
+  /* ---------- 屏 6 · VIP ---------- */
+  .vip-hero { text-align: center; margin: 18px 0 8px; }
+  .vip-hero .crown {
+    width: 52px; height: 52px; border-radius: 50%; margin: 0 auto 12px;
+    background: linear-gradient(135deg, #E9C87E, var(--dawn));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; box-shadow: 0 3px 0 #B08330;
+  }
+  .vip-hero .t { font-family: var(--serif); font-size: 20px; font-weight: 600; letter-spacing: .1em; }
+  .vip-hero .s { font-size: 11px; color: var(--fog); margin-top: 6px; letter-spacing: .08em; }
+
+  .perks { padding: 13px 16px; margin: 12px 0 14px; }
+  .perks .row { display: flex; align-items: center; gap: 10px; padding: 7px 0; font-size: 12px; }
+  .perks .row .mk { color: var(--dawn); font-family: var(--serif); font-weight: 600; }
+
+  .plan { padding: 13px 15px; margin-bottom: 10px; display: flex; align-items: center; gap: 12px; }
+  .plan .pname { font-size: 13px; font-weight: 600; }
+  .plan .pdesc { font-size: 10px; color: var(--fog); margin-top: 3px; }
+  .plan .price { margin-left: auto; text-align: right; }
+  .plan .p { font-family: var(--serif); font-size: 18px; font-weight: 600; color: var(--lake); }
+  .plan .pp { font-size: 9.5px; color: var(--fog); }
+  .plan.best {
+    border-color: rgba(217,164,65,.55);
+    background: linear-gradient(90deg, #FBF5E6, var(--page));
+  }
+  .plan.best .best-tag {
+    font-size: 9px; color: #fff; background: var(--dawn);
+    border-radius: 999px; padding: 1px 8px; letter-spacing: .1em; margin-left: 6px;
+  }
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <div class="kicker">AI 闯关学习小程序 · 网页原型</div>
+  <h1>扩展功能（P1 – P3）</h1>
+  <p>风格：湖畔手账 —— 留存分析 · 错题重温 · 多源输入 · 社交对战 · 商业闭环</p>
+  <div class="rule"></div>
+</header>
+
+<main class="gallery">
+
+  <!-- ① 个人中心 · 学习分析 -->
+  <figure class="screen">
+    <div class="phone">
+      <div class="statusbar"><span>4:58</span><span class="capsule"><i></i><i></i><i></i></span></div>
+      <div class="body">
+        <div class="chapter">P1 · 我的林间日志</div>
+        <div class="profile">
+          <div class="avatar">林</div>
+          <div>
+            <div class="name">林中客</div>
+            <div class="sub">已漫步 23 次 · 累计答对 96 题</div>
+          </div>
+        </div>
+
+        <div class="stats-row">
+          <div class="stat card"><div class="v">23</div><div class="l">闯关数</div></div>
+          <div class="stat card"><div class="v">78%</div><div class="l">总正确率</div></div>
+          <div class="stat card"><div class="v">12</div><div class="l">掌握知识点</div></div>
+        </div>
+
+        <div class="sec-h">近七日答题</div>
+        <div class="chart card">
+          <div class="bars">
+            <div class="bar-col"><div class="bar" style="height:38%"></div><div class="d">一</div></div>
+            <div class="bar-col"><div class="bar" style="height:55%"></div><div class="d">二</div></div>
+            <div class="bar-col"><div class="bar" style="height:42%"></div><div class="d">三</div></div>
+            <div class="bar-col"><div class="bar" style="height:70%"></div><div class="d">四</div></div>
+            <div class="bar-col"><div class="bar" style="height:50%"></div><div class="d">五</div></div>
+            <div class="bar-col"><div class="bar" style="height:80%"></div><div class="d">六</div></div>
+            <div class="bar-col"><div class="bar today" style="height:62%"></div><div class="d">今</div></div>
+          </div>
+          <div class="legend">
+            <span><i style="background:linear-gradient(180deg,var(--mist),var(--lake))"></i>答题数</span>
+            <span><i style="background:linear-gradient(180deg,var(--dawn),#B08330)"></i>今日</span>
+          </div>
+        </div>
+
+        <div class="sec-h">我的知识树</div>
+        <div class="tree card">
+          <svg class="branches" width="52" height="52" viewBox="0 0 52 52">
+            <path d="M26 50 V30 M26 30 C 16 24 12 16 8 10 M26 30 C 36 24 40 16 44 10 M26 30 C 26 20 26 16 26 8" stroke="#8B6F47" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+            <circle cx="8" cy="10" r="4.5" fill="#A8C4B8"/><circle cx="44" cy="10" r="4.5" fill="#A8C4B8"/><circle cx="26" cy="8" r="4.5" fill="#3A6B5C"/>
+          </svg>
+          <div class="leaves">
+            <span class="leaf core">光学</span><span class="leaf">波动性</span><span class="leaf">粒子性</span><span class="leaf">干涉</span><span class="leaf">衍射</span><span class="leaf">光电效应</span><span class="leaf">波粒二象性</span>
+          </div>
+        </div>
+
+        <div class="sec-h">最近复盘</div>
+        <div class="card recent">
+          <div class="row"><span class="f">光的波粒二象性</span><span class="s">今天 · 80%</span></div>
+          <div class="row"><span class="f">光合作用</span><span class="s">昨天 · 60%</span></div>
+          <div class="row"><span class="f">瓦尔登湖与超验主义</span><span class="s">3 天前 · 100% <span class="ok">✓</span></span></div>
+        </div>
+      </div>
+    </div>
+    <figcaption><span class="no">01</span><span class="name">个人中心 · 学习分析</span><span class="note">统计卡 + 七日答题柱状图 + 知识树（气泡节点）+ 历史复盘列表，对应需求 6"后台分析"</span></figcaption>
+  </figure>
+
+  <!-- ② 错题本 · 旧识重温 -->
+  <figure class="screen">
+    <div class="phone">
+      <div class="statusbar"><span>4:59</span><span class="capsule"><i></i><i></i><i></i></span></div>
+      <div class="body">
+        <div class="chapter">P1 · 旧识重温</div>
+
+        <div class="review-banner">
+          <div class="bell">⏳</div>
+          <div>
+            <div class="t">艾宾浩斯提醒：3 道错题到了重温之日</div>
+            <div class="s">今天复习，记忆保留率可提升 62%</div>
+          </div>
+          <span class="go">去重温 〉</span>
+        </div>
+
+        <div class="sec-h">待重温 · 今日</div>
+
+        <div class="card mistake-card">
+          <div class="q">光电效应实验中，光电子能否逸出只取决于光的强度，与频率无关。（判断）</div>
+          <div class="meta">
+            <span class="kp">光电效应</span><span class="kp">量子物理</span>
+            <span class="when">第 3 次错过 · 下次：明日</span>
+          </div>
+        </div>
+        <div class="card mistake-card">
+          <div class="q">双缝干涉实验中，明条纹处两列光波的光程差满足什么条件？（单选）</div>
+          <div class="meta">
+            <span class="kp">光的干涉</span>
+            <span class="when">第 1 次错过 · 下次：3 天后</span>
+          </div>
+        </div>
+        <div class="card mistake-card">
+          <div class="q">下列现象中，能说明光具有粒子性的是？（单选）</div>
+          <div class="meta">
+            <span class="kp">光的本性</span>
+            <span class="when">第 2 次错过 · 下次：后天</span>
+          </div>
+        </div>
+
+        <div class="sec-h">复习安排</div>
+        <div class="card recent">
+          <div class="row"><span class="f">📅 明日 · 1 道</span><span class="s">光电效应</span></div>
+          <div class="row"><span class="f">📅 后天 · 1 道</span><span class="s">光的本性</span></div>
+          <div class="row"><span class="f">📅 3 天后 · 1 道</span><span class="s">光的干涉</span></div>
+        </div>
+
+        <button class="btn-primary" style="margin-top:auto">开启"宝藏关卡" <span style="font-family:var(--serif)">→</span></button>
+      </div>
+    </div>
+    <figcaption><span class="no">02</span><span class="name">错题本 · 旧识重温</span><span class="note">艾宾浩斯遗忘曲线自动触发"旧识重温"宝藏关卡；错题卡带知识点与下次复习时间，配合订阅消息推送</span></figcaption>
+  </figure>
+
+  <!-- ③ 多格式输入 -->
+  <figure class="screen">
+    <div class="phone">
+      <div class="statusbar"><span>5:00</span><span class="capsule"><i></i><i></i><i></i></span></div>
+      <div class="body">
+        <div class="chapter">P1 · 万物皆可闯关</div>
+        <h2 style="font-family:var(--serif);font-size:21px;font-weight:600;line-height:1.5;margin:18px 0 4px;letter-spacing:.04em">不止是文字——<br>文档、网页、视频，<br>皆可为题。</h2>
+        <p style="font-size:11.5px;color:var(--fog);letter-spacing:.06em;margin-bottom:18px">选择一种方式，AI 解析全文并生成题库</p>
+
+        <div class="card source-card">
+          <div class="ico">PDF</div>
+          <div><div class="t">上传文档</div><div class="s">PDF / Word · 最大 20MB</div></div>
+        </div>
+        <div class="card source-card wood">
+          <div class="ico">🔗</div>
+          <div><div class="t">粘贴网页链接</div><div class="s">自动抓取正文并解析</div></div>
+        </div>
+        <div class="card source-card dawn">
+          <div class="ico">▶</div>
+          <div><div class="t">视频链接</div><div class="s">提取字幕与讲解生成题目</div></div>
+        </div>
+
+        <div class="sec-h">最近解析</div>
+        <div class="card recent">
+          <div class="row"><span class="f">量子力学导论.pdf</span><span class="s">昨天 <span class="ok">✓ 12 题</span></span></div>
+          <div class="row"><span class="f">zhihu.com/相对论科普</span><span class="s">前天 <span class="ok">✓ 5 题</span></span></div>
+          <div class="row"><span class="f">讲座录播 · 深度学习入门</span><span class="s">失败 · 重新解析</span></div>
+        </div>
+
+        <button class="btn-primary" style="margin-top:auto">开始解析并出题</button>
+      </div>
+    </div>
+    <figcaption><span class="no">03</span><span class="name">多格式输入</span><span class="note">P1 输入扩展：上传 PDF/Word、网页 URL、视频链接三类入口 + 最近解析记录；对应需求"多格式源信息解析"</span></figcaption>
+  </figure>
+
+  <!-- ④ 好友 PK -->
+  <figure class="screen">
+    <div class="phone">
+      <div class="statusbar"><span>5:01</span><span class="capsule"><i></i><i></i><i></i></span></div>
+      <div class="body">
+        <div class="chapter">P2 · 湖畔对弈</div>
+        <div class="pk-arena">
+          <div class="pk-title">— 随机匹配 · 物理领域 —</div>
+          <span class="pk-match-tag">⚔ 计分对局</span>
+          <div class="pk-players">
+            <div class="pk-player card">
+              <div class="mini-avatar">林</div>
+              <div class="pn">林中客</div>
+              <div class="rank">黄金 · 1300</div>
+              <div class="score">3</div>
+              <div class="bar"><div class="fill" style="width:60%"></div></div>
+            </div>
+            <div class="pk-vs">VS</div>
+            <div class="pk-player opp card">
+              <div class="mini-avatar">湖</div>
+              <div class="pn">湖心亭</div>
+              <div class="rank">白银 · 1100</div>
+              <div class="score">2</div>
+              <div class="bar"><div class="fill" style="width:40%;background:var(--wood)"></div></div>
+            </div>
+          </div>
+
+          <div class="pk-question card">
+            <div class="q">第 4 题 · 下列说法中，能证明光具有波动性的是？</div>
+            <span class="timer">各自作答 · 本局剩余 0:12</span>
+          </div>
+        </div>
+
+        <div class="option" style="display:flex;align-items:flex-start;gap:12px;padding:12px 14px;margin:10px 0;border-radius:12px;background:var(--page);border:1px solid rgba(139,111,71,.18)">
+          <span style="width:22px;height:22px;border-radius:7px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:12px;color:var(--wood);border:1px solid rgba(139,111,71,.35);background:#FAF6EC">A</span>
+          <span style="font-size:12.5px;line-height:1.6;padding-top:2px">光电效应</span>
+        </div>
+        <div class="option" style="display:flex;align-items:flex-start;gap:12px;padding:12px 14px;margin:0 0 10px;border-radius:12px;background:var(--page);border:1px solid rgba(139,111,71,.18)">
+          <span style="width:22px;height:22px;border-radius:7px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:12px;color:var(--wood);border:1px solid rgba(139,111,71,.35);background:#FAF6EC">B</span>
+          <span style="font-size:12.5px;line-height:1.6;padding-top:2px">光的干涉与衍射</span>
+        </div>
+
+        <div class="sec-h">最近对局 · 积分变动</div>
+        <div class="card recent">
+          <div class="row"><span class="f">vs 湖心亭 · 胜 3:2</span><span class="s">昨天 · 积分 +8</span></div>
+          <div class="row"><span class="f">vs 松间照 · 负 2:5</span><span class="s">前天 · 积分 −24</span></div>
+          <div class="row"><span class="f">vs 竹里馆 · 友谊赛胜</span><span class="s">3 天前 · 不计分</span></div>
+        </div>
+
+        <button class="btn-primary" style="margin-top:auto">邀请好友 PK · 友谊赛不计分</button>
+      </div>
+    </div>
+    <figcaption><span class="no">04</span><span class="name">好友 PK 对战</span><span class="note">P2 社交裂变：实时对战，双方各自作答同套 5 题比总分（平局看用时）；结算按分领域积分，段位+积分常驻展示；好友邀请局为友谊赛不计分（防互刷）</span></figcaption>
+  </figure>
+
+  <!-- ⑤ 排行榜 -->
+  <figure class="screen">
+    <div class="phone">
+      <div class="statusbar"><span>5:02</span><span class="capsule"><i></i><i></i><i></i></span></div>
+      <div class="body">
+        <div class="chapter">P2 · 湖畔名人堂</div>
+
+        <div class="rank-tabs">
+          <span class="rank-tab">全部</span>
+          <span class="rank-tab on">物理学</span>
+          <span class="rank-tab">文学</span>
+        </div>
+
+        <div class="rank-item card top">
+          <span class="badge">🥇</span>
+          <div class="info"><div class="n">追光者</div><div class="s">钻石段位 · 47 场 · 胜率 72%</div></div>
+          <span class="pts">1,568</span>
+        </div>
+        <div class="rank-item card top">
+          <span class="badge">🥈</span>
+          <div class="info"><div class="n">量子小猫</div><div class="s">铂金段位 · 31 场 · 胜率 68%</div></div>
+          <span class="pts">1,442</span>
+        </div>
+        <div class="rank-item card top">
+          <span class="badge">🥉</span>
+          <div class="info"><div class="n">湖畔诗人</div><div class="s">铂金段位 · 22 场 · 胜率 65%</div></div>
+          <span class="pts">1,398</span>
+        </div>
+
+        <div class="sec-h">其他漫游者</div>
+        <div class="rank-item card">
+          <span class="no">07</span>
+          <div class="info"><div class="n">松间照</div><div class="s">黄金段位 · 18 场 · 胜率 61%</div></div>
+          <span class="pts">1,290</span>
+        </div>
+        <div class="rank-item card me">
+          <span class="no">12</span>
+          <div class="info"><div class="n">林中客（我）</div><div class="s">白银段位 · 8 场 · 距黄金还差 130 分</div></div>
+          <span class="pts">1,120</span>
+        </div>
+        <div class="rank-item card">
+          <span class="no">13</span>
+          <div class="info"><div class="n">雾中来</div><div class="s">白银段位 · 7 场 · 胜率 43%</div></div>
+          <span class="pts">1,105</span>
+        </div>
+
+        <button class="btn-primary" style="margin-top:auto">向第 11 名发起挑战</button>
+      </div>
+    </div>
+    <figcaption><span class="no">05</span><span class="name">排行榜</span><span class="note">P2 分领域积分榜：榜单分仅来自随机匹配 PK 结算（好友局不计分），≥3 场对局才上榜；段位徽章 + 我的排名高亮</span></figcaption>
+  </figure>
+
+  <!-- ⑥ VIP -->
+  <figure class="screen">
+    <div class="phone">
+      <div class="statusbar"><span>5:03</span><span class="capsule"><i></i><i></i><i></i></span></div>
+      <div class="body">
+        <div class="chapter">P3 · 湖畔书房</div>
+        <div class="vip-hero">
+          <div class="crown">👑</div>
+          <div class="t">湖畔会员</div>
+          <div class="s">让每一次漫步都更深、更远</div>
+        </div>
+
+        <div class="card perks">
+          <div class="row"><span class="mk">✓</span>每日无限次闯关（免费版每日 3 次）</div>
+          <div class="row"><span class="mk">✓</span>超大文档解析 · 视频链接出题</div>
+          <div class="row"><span class="mk">✓</span>AI 深度复盘报告 + 专属海报</div>
+          <div class="row"><span class="mk">✓</span>艾宾浩斯智能重温计划</div>
+        </div>
+
+        <div class="card plan">
+          <div><div class="pname">月度会员</div><div class="pdesc">灵活体验 · 随时续费</div></div>
+          <div class="price"><span class="p">¥12</span><span class="pp">/ 月</span></div>
+        </div>
+        <div class="card plan best">
+          <div><div class="pname">年度会员<span class="best-tag">最受欢迎</span></div><div class="pdesc">日均仅 ¥0.26 · 立省 ¥45</div></div>
+          <div class="price"><span class="p">¥98</span><span class="pp">/ 年</span></div>
+        </div>
+        <div class="card plan">
+          <div><div class="pname">终身会员</div><div class="pdesc">一次购买 · 湖畔永久居住</div></div>
+          <div class="price"><span class="p">¥298</span><span class="pp">/ 终身</span></div>
+        </div>
+
+        <button class="btn-primary" style="margin-top:auto;background:linear-gradient(135deg,#E9C87E,var(--dawn));box-shadow:0 3px 0 #B08330">立即开通</button>
+      </div>
+    </div>
+    <figcaption><span class="no">06</span><span class="name">VIP 会员</span><span class="note">P3 商业闭环：特权清单 + 三档订阅（年度推荐），金色"湖畔书房"主题与整体风格统一</span></figcaption>
+  </figure>
+
+</main>
+
+</body>
+</html>
