@@ -1,0 +1,16 @@
+// ============ 湖畔手账 · 设计系统（逐字对齐原型 01-core-flow.html :root） ============
+$paper: #F7F4ED;        // 羊皮纸米白 · 全局背景
+$page: #FFFDF8;         // 纸页 · 卡片面
+$lake: #3A6B5C;         // 湖水青碧 · 主色
+$lake-deep: #2C4A3E;    // 深湖 · 按压/文字
+$mist: #A8C4B8;         // 湖光浅 · 辅助
+$wood: #8B6F47;         // 松木棕 · 分隔/图标
+$ink: #2C3A33;          // 炭墨 · 正文
+$fog: #6B7A72;          // 晨雾灰 · 次要文字
+$moss: #4E7D5E;         // 苔绿 · 答对
+$maple: #B3594C;        // 枫红棕 · 答错
+$dawn: #D9A441;         // 晨光金 · 金句点缀
+
+// 衬线（小程序无法加载 Noto Serif SC，iOS 用系统 Songti SC，与原型同风格不同字体文件——已知差异）
+$font-serif: 'Songti SC', 'STSong', 'SimSun', Georgia, serif;
+$font-sans: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;

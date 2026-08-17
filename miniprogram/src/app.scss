@@ -1,0 +1,96 @@
+@use './styles/variables.scss' as *;
+
+// 全局（750 设计稿：原型 CSS px 值 × 2 换算 rpx）
+page {
+  background: $paper;
+  color: $ink;
+  font-family: $font-sans;
+  font-size: 28rpx;
+  line-height: 1.6;
+}
+
+// 小程序 button 默认样式重置（按钮样式统一由 .btn-* 控制）
+button {
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  border-radius: 0;
+  font-size: inherit;
+  line-height: inherit;
+
+  &::after {
+    border: none;
+  }
+}
+
+// 纸页卡片（原型 .card）
+.card {
+  background: $page;
+  border: 1px solid rgba(139, 111, 71, 0.16);
+  border-radius: 32rpx;
+  box-shadow: 0 2rpx 0 rgba(139, 111, 71, 0.10), 0 12rpx 36rpx rgba(44, 58, 51, 0.05);
+}
+
+// 主按钮（木刻感：底部深色线，按压下沉——原型 .btn-primary）
+.btn-primary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16rpx;
+  height: 100rpx;
+  border-radius: 24rpx;
+  border: none;
+  background: $lake;
+  color: #FBF8EF;
+  font-size: 30rpx;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  box-shadow: 0 6rpx 0 $lake-deep;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+
+  &:active {
+    transform: translateY(6rpx);
+    box-shadow: 0 0 0 $lake-deep;
+  }
+}
+
+// 幽灵按钮（原型 .btn-ghost）
+.btn-ghost {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100rpx;
+  border-radius: 24rpx;
+  background: transparent;
+  border: 1px solid rgba(139, 111, 71, 0.4);
+  color: $lake;
+  font-size: 30rpx;
+  letter-spacing: 0.12em;
+  font-weight: 600;
+}
+
+// 章节号（原型 .chapter：CHAP. 01 · 湖畔）
+.chapter {
+  font-family: $font-serif;
+  font-size: 22rpx;
+  letter-spacing: 0.35em;
+  color: $wood;
+}
+
+// 节标题 + 右侧细线（原型 .sec-h）
+.sec-h {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  font-size: 22rpx;
+  color: $wood;
+  letter-spacing: 0.22em;
+  margin: 36rpx 0 20rpx;
+
+  &::after {
+    content: '';
+    flex: 1;
+    height: 1rpx;
+    background: rgba(139, 111, 71, 0.22);
+  }
+}

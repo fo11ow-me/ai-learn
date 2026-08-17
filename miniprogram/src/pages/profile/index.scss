@@ -1,0 +1,118 @@
+@use '../../styles/variables.scss' as *;
+
+// 「我的」页（对齐扩展原型 02-extended-flow.html 屏 1 个人中心风格）
+// .body 用 flex:1 填满剩余（WHY：min-height:100vh 叠加状态栏内边距会把底部内容挤出视口）
+.page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 16rpx 44rpx calc(48rpx + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+}
+
+// 头像 + 昵称（P1 接入微信授权头像昵称）
+.profile {
+  display: flex;
+  align-items: center;
+  gap: 28rpx;
+  margin: 28rpx 0 12rpx;
+}
+
+.avatar {
+  width: 104rpx;
+  height: 104rpx;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: radial-gradient(circle at 32% 28%, #5C8A78, $lake 75%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: $font-serif;
+  font-size: 36rpx;
+  color: #FBF8EF;
+  box-shadow: 0 4rpx 0 $lake-deep;
+}
+
+.profile .name {
+  font-family: $font-serif;
+  font-size: 34rpx;
+  font-weight: 600;
+  color: $ink;
+}
+
+.profile .sub {
+  font-size: 22rpx;
+  color: $fog;
+  margin-top: 8rpx;
+  letter-spacing: 0.05em;
+}
+
+// 统计卡
+.stats-row {
+  display: flex;
+  gap: 20rpx;
+  margin-top: 28rpx;
+}
+
+.stat {
+  flex: 1;
+  padding: 24rpx 20rpx;
+  text-align: center;
+
+  .v {
+    font-family: $font-serif;
+    font-size: 38rpx;
+    font-weight: 600;
+    color: $lake;
+  }
+
+  .l {
+    font-size: 20rpx;
+    color: $fog;
+    margin-top: 8rpx;
+    letter-spacing: 0.12em;
+  }
+}
+
+// 空态卡
+.empty-card {
+  margin-top: 32rpx;
+  padding: 40rpx 32rpx;
+  text-align: center;
+
+  .empty-leaf {
+    width: 72rpx;
+    height: 72rpx;
+    margin-bottom: 16rpx;
+    opacity: 0.85;
+  }
+
+  .empty-title {
+    font-family: $font-serif;
+    font-size: 30rpx;
+    font-weight: 600;
+    color: $ink;
+  }
+
+  .empty-sub {
+    font-size: 24rpx;
+    color: $fog;
+    line-height: 1.8;
+    margin-top: 16rpx;
+  }
+}
+
+.go-btn {
+  margin-top: 48rpx;
+}
+
+.arrow {
+  font-family: $font-serif;
+}

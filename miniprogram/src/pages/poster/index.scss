@@ -1,0 +1,75 @@
+@use '../../styles/variables.scss' as *;
+
+// ============ 屏 7 · 海报（原型 01-core-flow.html，750 设计稿 px×2=rpx） ============
+// 顶部留白由 JS 按 statusBarHeight 动态设置（内联 style）
+// .body 用 flex:1 填满剩余（WHY：min-height:100vh 叠加状态栏内边距会把底部内容挤出视口）
+.page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 16rpx 44rpx calc(48rpx + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+}
+
+.poster-stage {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20rpx 0;
+}
+
+// 预览圆角裁剪（导出图为直角，原型 18px 圆角由容器实现）
+.poster-frame {
+  width: 524rpx;
+  height: 680rpx;
+  border-radius: 36rpx;
+  overflow: hidden;
+  box-shadow: 0 36rpx 80rpx rgba(20, 35, 28, 0.5);
+}
+
+.poster-canvas {
+  width: 524rpx;
+  height: 680rpx;
+}
+
+.btn-row {
+  display: flex;
+  gap: 20rpx;
+
+  .btn-primary {
+    flex: 1.2;
+  }
+
+  .btn-ghost {
+    flex: 1;
+  }
+}
+
+// 异常入口
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  padding: 0 80rpx;
+
+  .empty-msg {
+    font-size: 28rpx;
+    color: $fog;
+    margin-bottom: 48rpx;
+    text-align: center;
+  }
+
+  .btn-primary {
+    width: 400rpx;
+  }
+}

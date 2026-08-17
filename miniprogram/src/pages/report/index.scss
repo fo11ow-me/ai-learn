@@ -1,0 +1,301 @@
+@use '../../styles/variables.scss' as *;
+
+// ============ 屏 6 · 报告（原型 01-core-flow.html，750 设计稿 px×2=rpx） ============
+// 顶部留白由 JS 按 statusBarHeight 动态设置（内联 style）
+// .body 用 flex:1 填满剩余（WHY：min-height:100vh 叠加状态栏内边距会把底部内容挤出视口）
+.page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 16rpx 44rpx calc(48rpx + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+}
+
+// 头部：环形正确率 + 完成文案
+.report-head {
+  display: flex;
+  align-items: center;
+  gap: 40rpx;
+  margin: 36rpx 0 40rpx;
+}
+
+.ring {
+  width: 184rpx;
+  height: 184rpx;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  .inner {
+    width: 140rpx;
+    height: 140rpx;
+    border-radius: 50%;
+    background: $paper;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .num {
+    font-family: $font-serif;
+    font-size: 44rpx;
+    font-weight: 600;
+    color: $lake;
+  }
+
+  .lbl {
+    font-size: 18rpx;
+    color: $fog;
+    letter-spacing: 0.15em;
+  }
+}
+
+.report-head .meta {
+  .stamp {
+    font-family: $font-serif;
+    font-size: 38rpx;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: $ink;
+  }
+
+  .sub {
+    font-size: 22rpx;
+    color: $fog;
+    margin-top: 12rpx;
+    letter-spacing: 0.06em;
+  }
+}
+
+// 知识总结
+.summary {
+  padding: 28rpx 32rpx;
+  font-size: 25rpx;
+  line-height: 1.9;
+  color: #4A5650;
+}
+
+// 掌握度条
+.mastery {
+  margin-bottom: 18rpx;
+
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 20rpx;
+    margin-bottom: 18rpx;
+  }
+
+  .kp {
+    width: 144rpx;
+    font-size: 23rpx;
+    font-weight: 600;
+    color: $ink;
+    flex-shrink: 0;
+  }
+
+  .bar {
+    flex: 1;
+    height: 16rpx;
+    border-radius: 999rpx;
+    background: rgba(139, 111, 71, 0.14);
+    overflow: hidden;
+  }
+
+  .fill {
+    height: 100%;
+    border-radius: 999rpx;
+    background: linear-gradient(90deg, $mist, $lake);
+  }
+
+  .pct {
+    width: 60rpx;
+    text-align: right;
+    font-family: $font-serif;
+    font-size: 22rpx;
+    color: $fog;
+  }
+}
+
+// 下一步建议
+.suggest {
+  padding: 26rpx 32rpx;
+  font-size: 25rpx;
+  line-height: 1.8;
+  color: #4A5650;
+
+  .s-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 12rpx;
+    margin-bottom: 8rpx;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  .n {
+    font-family: $font-serif;
+    color: $wood;
+    flex-shrink: 0;
+  }
+}
+
+// 金句卡（左侧晨光金竖条）
+.quote-card {
+  position: relative;
+  padding: 36rpx 36rpx 28rpx;
+  margin: 32rpx 0 36rpx;
+  background: $page;
+  border-radius: 32rpx;
+  overflow: hidden;
+  border: 1px solid rgba(217, 164, 65, 0.35);
+
+  &::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 6rpx;
+    background: linear-gradient(180deg, $dawn, transparent);
+  }
+
+  .q {
+    font-family: $font-serif;
+    font-size: 33rpx;
+    line-height: 1.9;
+    font-weight: 600;
+    color: $ink;
+  }
+}
+
+.btn-row {
+  display: flex;
+  gap: 20rpx;
+  margin-top: auto;
+
+  .btn-primary {
+    flex: 1.2;
+  }
+
+  .btn-ghost {
+    flex: 1;
+  }
+}
+
+// 生成中 / 失败
+.loading-center {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding-bottom: 120rpx;
+}
+
+.ripple-stage {
+  position: relative;
+  width: 280rpx;
+  height: 280rpx;
+  margin-bottom: 60rpx;
+}
+
+.ripple {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 50%;
+  border: 3rpx solid $lake;
+  animation: ripple 2.6s cubic-bezier(0.2, 0.6, 0.3, 1) infinite;
+  opacity: 0;
+
+  &:nth-child(2) {
+    animation-delay: 0.9s;
+  }
+
+  &:nth-child(3) {
+    animation-delay: 1.8s;
+  }
+}
+
+.ripple-core {
+  position: absolute;
+  left: 84rpx;
+  top: 84rpx;
+  right: 84rpx;
+  bottom: 84rpx;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #5C8A78, $lake 70%);
+  box-shadow: 0 12rpx 36rpx rgba(58, 107, 92, 0.35);
+}
+
+@keyframes ripple {
+  0% {
+    transform: scale(0.35);
+    opacity: 0;
+  }
+  25% {
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1.15);
+    opacity: 0;
+  }
+}
+
+.loading-text {
+  font-family: $font-serif;
+  font-size: 34rpx;
+  letter-spacing: 0.1em;
+  color: $lake;
+  text-align: center;
+}
+
+.error-msg {
+  font-size: 28rpx;
+  color: $maple;
+  margin-bottom: 40rpx;
+  padding: 0 40rpx;
+  text-align: center;
+  line-height: 1.7;
+}
+
+.retry-btn {
+  width: 400rpx;
+  margin-bottom: 20rpx;
+}
+
+// 异常入口
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  padding: 0 80rpx;
+
+  .empty-msg {
+    font-size: 28rpx;
+    color: $fog;
+    margin-bottom: 48rpx;
+    text-align: center;
+  }
+
+  .btn-primary {
+    width: 400rpx;
+  }
+}

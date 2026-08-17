@@ -1,0 +1,282 @@
+@use '../../styles/variables.scss' as *;
+
+// ============ 屏 3/4/5 · 答题（原型 01-core-flow.html，750 设计稿 px×2=rpx） ============
+// 顶部留白由 JS 按 statusBarHeight 动态设置（内联 style）
+// .body 用 flex:1 填满剩余（WHY：min-height:100vh 叠加状态栏内边距会把贴底按钮挤出视口）
+.page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 16rpx 44rpx calc(48rpx + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+}
+
+.quiz-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 12rpx 0 28rpx;
+
+  .count {
+    font-family: $font-serif;
+    font-size: 24rpx;
+    color: $fog;
+    letter-spacing: 0.08em;
+  }
+}
+
+// 题型标签
+.type-tag {
+  font-size: 20rpx;
+  color: $lake;
+  border: 1px solid rgba(58, 107, 92, 0.45);
+  border-radius: 999rpx;
+  padding: 4rpx 20rpx;
+  letter-spacing: 0.1em;
+}
+
+// 湖畔小径进度：胶囊轨道 + 石子节点
+.trail {
+  display: flex;
+  align-items: center;
+  margin-bottom: 44rpx;
+
+  .trail-seg {
+    flex: 1;
+    display: flex;
+    align-items: center;
+
+    &:last-child {
+      flex: 0 0 auto;
+    }
+  }
+
+  .node {
+    flex: 1;
+    height: 12rpx;
+    border-radius: 999rpx;
+    background: rgba(139, 111, 71, 0.18);
+
+    &.done {
+      background: $lake;
+    }
+
+    &.current {
+      background: $mist;
+    }
+  }
+
+  .stone {
+    width: 18rpx;
+    height: 18rpx;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background: $page;
+    border: 4rpx solid rgba(139, 111, 71, 0.4);
+    box-sizing: border-box;
+
+    &.done {
+      background: $lake;
+      border-color: $lake;
+    }
+
+    &.current {
+      background: $mist;
+      border-color: $mist;
+    }
+  }
+}
+
+.question {
+  font-family: $font-serif;
+  font-size: 36rpx;
+  line-height: 1.75;
+  font-weight: 600;
+  margin-bottom: 32rpx;
+  color: $ink;
+}
+
+// 选项纸页卡片
+.option {
+  display: flex;
+  align-items: flex-start;
+  gap: 24rpx;
+  padding: 22rpx 24rpx;
+  margin-bottom: 16rpx;
+  border-radius: 24rpx;
+  background: $page;
+  border: 1px solid rgba(139, 111, 71, 0.18);
+  transition: border-color 0.15s ease;
+
+  .key {
+    width: 48rpx;
+    height: 48rpx;
+    border-radius: 16rpx;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: $font-serif;
+    font-size: 24rpx;
+    color: $wood;
+    border: 1px solid rgba(139, 111, 71, 0.35);
+    background: #FAF6EC;
+    box-sizing: border-box;
+  }
+
+  .txt {
+    font-size: 27rpx;
+    line-height: 1.65;
+    padding-top: 4rpx;
+    color: $ink;
+  }
+
+  // 多选提交前的勾选态
+  &.picked {
+    border-color: $lake;
+
+    .key {
+      background: $lake;
+      border-color: $lake;
+      color: #FBF8EF;
+    }
+  }
+
+  // 作答后状态（原型 .option.right/.wrong/.dim）
+  &.right {
+    background: #EAF2EC;
+    border-color: $moss;
+
+    .key {
+      background: $moss;
+      border-color: $moss;
+      color: #FBF8EF;
+    }
+  }
+
+  &.wrong {
+    background: #F6ECE8;
+    border-color: $maple;
+
+    .key {
+      background: $maple;
+      border-color: $maple;
+      color: #FBF8EF;
+    }
+  }
+
+  &.dim {
+    opacity: 0.55;
+  }
+}
+
+// 作答判定文案
+.verdict {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  margin: 4rpx 0 20rpx;
+
+  .dot {
+    width: 16rpx;
+    height: 16rpx;
+    border-radius: 50%;
+  }
+
+  .t {
+    font-family: $font-serif;
+    font-size: 30rpx;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+  }
+
+  &.right {
+    .dot {
+      background: $moss;
+    }
+
+    .t {
+      color: $moss;
+    }
+  }
+
+  &.wrong {
+    .dot {
+      background: $maple;
+    }
+
+    .t {
+      color: $maple;
+    }
+  }
+}
+
+// 讲解卡（纸页质感 + 左侧木纹线；margin-bottom 保证按钮贴底时与讲解卡的最小间距）
+.explain {
+  padding: 28rpx 32rpx;
+  margin: 8rpx 0 32rpx;
+  background: $page;
+  border-left: 6rpx solid $wood;
+  border-radius: 12rpx 28rpx 28rpx 12rpx;
+  box-shadow: 0 2rpx 0 rgba(139, 111, 71, 0.1);
+
+  .h {
+    font-size: 22rpx;
+    color: $wood;
+    letter-spacing: 0.25em;
+    margin-bottom: 14rpx;
+  }
+
+  .p {
+    display: block;
+    font-size: 24rpx;
+    line-height: 1.7;
+    color: #4A5650;
+  }
+
+  .kp {
+    display: inline-block;
+    margin-top: 20rpx;
+    font-size: 20rpx;
+    color: $lake;
+    border: 1px solid rgba(58, 107, 92, 0.4);
+    border-radius: 999rpx;
+    padding: 4rpx 20rpx;
+  }
+}
+
+.next-btn {
+  margin-top: auto;
+}
+
+.arrow {
+  font-family: $font-serif;
+}
+
+// 异常入口
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  padding: 0 80rpx;
+
+  .empty-msg {
+    font-size: 28rpx;
+    color: $fog;
+    margin-bottom: 48rpx;
+    text-align: center;
+  }
+
+  .btn-primary {
+    width: 400rpx;
+  }
+}
