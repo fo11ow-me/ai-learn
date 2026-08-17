@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.deps import deps
-from app.api.routes import health, qrcode, quiz, report
+from app.api.routes import auth, health, qrcode, quiz, report
 
 _logger = logging.getLogger(__name__)
 
@@ -31,6 +31,7 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    app.include_router(auth.router)
     app.include_router(health.router)
     app.include_router(quiz.router)
     app.include_router(report.router)
