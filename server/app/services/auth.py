@@ -32,7 +32,14 @@ def fetch_openid(code: str, settings: Settings) -> str:
         },
         timeout=10,
     )
-    data = resp.json()
+    # 非 200 / 非 JSON 响应统一归一化为 AuthError（WHY：微信网关异常时可能返回 HTML
+    # 错误页，resp.json() 解析会抛 ValueError，若不捕获则逃逸为 500，路由层只识别 AuthError）
+    if resp.status_code != 200:
+        raise AuthError("微信登录失败，请重试", code="WX_LOGIN_FAILED")
+    try:
+        data = resp.json()
+    except ValueError as exc:
+        raise AuthError("微信登录失败，请重试", code="WX_LOGIN_FAILED") from exc
     if data.get("errcode") or not data.get("openid"):
         raise AuthError("微信登录失败，请重试", code="WX_LOGIN_FAILED")
     return data["openid"]
