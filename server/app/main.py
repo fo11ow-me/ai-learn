@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.deps import deps
 from app.api.routes import auth, health, qrcode, quiz, report, user
+from app.core.config import validate_settings
 
 _logger = logging.getLogger(__name__)
 
@@ -14,6 +15,7 @@ _logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     deps(app)  # 惰性装配（含 app.state.db）
+    validate_settings(app.state.settings)  # 正式模式漏配 JWT_SECRET → 启动即失败（fail fast，防空密钥伪造 token）
     try:
         await app.state.db.create_all()
     except Exception as exc:  # MySQL 未启动时记录日志继续启动（WHY：不影响 /health 探活，DB 接口调用时再报错）

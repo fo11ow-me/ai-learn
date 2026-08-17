@@ -80,3 +80,14 @@ class Settings:
 def get_settings() -> Settings:
     """从环境变量构建配置（每次重新读取，保证测试可用环境变量注入）"""
     return Settings.from_env()
+
+
+def validate_settings(settings: Settings) -> None:
+    """启动守卫（WHY：正式模式（auth_mock=False）下 JWT_SECRET 为空会以空密钥签发/校验 JWT，
+    任何人均可伪造任意 user_id 的登录态；开发 MOCK 模式跳过 code2session，不受影响）
+
+    @param settings 装配完成的运行配置
+    @throws RuntimeError 正式模式且 JWT_SECRET 为空
+    """
+    if not settings.auth_mock and not settings.jwt_secret:
+        raise RuntimeError("正式模式必须配置 JWT_SECRET（当前为空，空密钥签发的 JWT 可被任意伪造，拒绝启动）")
