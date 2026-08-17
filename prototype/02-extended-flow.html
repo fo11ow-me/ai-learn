@@ -65,8 +65,6 @@
   .screen:nth-child(2) { animation-delay: .08s; }
   .screen:nth-child(3) { animation-delay: .16s; }
   .screen:nth-child(4) { animation-delay: .24s; }
-  .screen:nth-child(5) { animation-delay: .32s; }
-  .screen:nth-child(6) { animation-delay: .40s; }
   @keyframes rise { to { opacity: 1; transform: none; } }
 
   .screen figcaption { margin-top: 14px; text-align: center; }
@@ -218,43 +216,7 @@
   .recent .s { font-size: 10px; color: var(--fog); }
   .recent .ok { font-size: 10px; color: var(--moss); }
 
-  /* ---------- 屏 4 · PK 对战 ---------- */
-  .pk-arena { text-align: center; margin-top: 14px; }
-  .pk-title { font-family: var(--serif); font-size: 15px; letter-spacing: .2em; color: var(--wood); }
-  .pk-players { display: flex; align-items: stretch; gap: 8px; margin: 12px 0 6px; }
-  .pk-player {
-    flex: 1; padding: 14px 10px; text-align: center;
-  }
-  .pk-player .mini-avatar {
-    width: 38px; height: 38px; border-radius: 50%; margin: 0 auto 6px;
-    background: radial-gradient(circle at 32% 28%, #5C8A78, var(--lake) 75%);
-    display: flex; align-items: center; justify-content: center;
-    font-family: var(--serif); font-size: 15px; color: #FBF8EF;
-  }
-  .pk-player.opp .mini-avatar { background: radial-gradient(circle at 32% 28%, #A5856B, var(--wood) 75%); }
-  .pk-player .pn { font-size: 12px; font-weight: 600; }
-  .pk-player .rank { font-size: 10px; color: var(--wood); margin-top: 4px; letter-spacing: .06em; }
-  .pk-player .score { font-family: var(--serif); font-size: 24px; font-weight: 600; color: var(--lake); margin: 4px 0 8px; }
-  .pk-match-tag {
-    display: inline-block; margin: 10px auto 0; font-size: 10px; color: var(--lake);
-    border: 1px solid rgba(58,107,92,.45); border-radius: 999px; padding: 2px 10px; letter-spacing: .1em;
-  }
-  .pk-player .bar { height: 8px; border-radius: 999px; background: rgba(139,111,71,.14); overflow: hidden; }
-  .pk-player .fill { height: 100%; background: var(--lake); border-radius: 999px; }
-  .pk-vs {
-    align-self: center; font-family: var(--serif); font-size: 16px; font-weight: 600;
-    color: var(--maple); letter-spacing: .1em;
-  }
-  .pk-question {
-    padding: 14px 16px; margin-top: 10px; text-align: left;
-  }
-  .pk-question .q { font-family: var(--serif); font-size: 14px; line-height: 1.7; font-weight: 600; }
-  .pk-question .timer {
-    display: inline-block; margin-top: 10px; font-size: 10px; color: var(--maple);
-    border: 1px solid rgba(179,89,76,.45); border-radius: 999px; padding: 2px 10px; letter-spacing: .1em;
-  }
-
-  /* ---------- 屏 5 · 排行榜 ---------- */
+  /* ---------- 屏 4 · 金币排行榜 ---------- */
   .rank-tabs { display: flex; gap: 8px; margin: 14px 0 12px; }
   .rank-tab {
     flex: 1; text-align: center; font-size: 11.5px; padding: 8px 0; border-radius: 999px;
@@ -282,35 +244,6 @@
   .rank-item .pts { font-family: var(--serif); font-size: 14px; font-weight: 600; color: var(--lake); }
   .rank-item.me { border-color: rgba(58,107,92,.5); background: #F0F5F0; }
 
-  /* ---------- 屏 6 · VIP ---------- */
-  .vip-hero { text-align: center; margin: 18px 0 8px; }
-  .vip-hero .crown {
-    width: 52px; height: 52px; border-radius: 50%; margin: 0 auto 12px;
-    background: linear-gradient(135deg, #E9C87E, var(--dawn));
-    display: flex; align-items: center; justify-content: center;
-    font-size: 22px; box-shadow: 0 3px 0 #B08330;
-  }
-  .vip-hero .t { font-family: var(--serif); font-size: 20px; font-weight: 600; letter-spacing: .1em; }
-  .vip-hero .s { font-size: 11px; color: var(--fog); margin-top: 6px; letter-spacing: .08em; }
-
-  .perks { padding: 13px 16px; margin: 12px 0 14px; }
-  .perks .row { display: flex; align-items: center; gap: 10px; padding: 7px 0; font-size: 12px; }
-  .perks .row .mk { color: var(--dawn); font-family: var(--serif); font-weight: 600; }
-
-  .plan { padding: 13px 15px; margin-bottom: 10px; display: flex; align-items: center; gap: 12px; }
-  .plan .pname { font-size: 13px; font-weight: 600; }
-  .plan .pdesc { font-size: 10px; color: var(--fog); margin-top: 3px; }
-  .plan .price { margin-left: auto; text-align: right; }
-  .plan .p { font-family: var(--serif); font-size: 18px; font-weight: 600; color: var(--lake); }
-  .plan .pp { font-size: 9.5px; color: var(--fog); }
-  .plan.best {
-    border-color: rgba(217,164,65,.55);
-    background: linear-gradient(90deg, #FBF5E6, var(--page));
-  }
-  .plan.best .best-tag {
-    font-size: 9px; color: #fff; background: var(--dawn);
-    border-radius: 999px; padding: 1px 8px; letter-spacing: .1em; margin-left: 6px;
-  }
 </style>
 </head>
 <body>
@@ -318,7 +251,7 @@
 <header class="doc-head">
   <div class="kicker">AI 闯关学习小程序 · 网页原型</div>
   <h1>扩展功能（P1 – P3）</h1>
-  <p>风格：湖畔手账 —— 留存分析 · 错题重温 · 多源输入 · 社交对战 · 商业闭环</p>
+  <p>风格：湖畔手账 —— 留存分析 · 错题重温 · 多源输入 · 金币激励</p>
   <div class="rule"></div>
 </header>
 
@@ -334,7 +267,7 @@
           <div class="avatar">林</div>
           <div>
             <div class="name">林中客</div>
-            <div class="sub">已漫步 23 次 · 累计答对 96 题</div>
+            <div class="sub">已漫步 23 次 · 累计答对 96 题 · 金币 865</div>
           </div>
         </div>
 
@@ -342,6 +275,7 @@
           <div class="stat card"><div class="v">23</div><div class="l">闯关数</div></div>
           <div class="stat card"><div class="v">78%</div><div class="l">总正确率</div></div>
           <div class="stat card"><div class="v">12</div><div class="l">掌握知识点</div></div>
+          <div class="stat card"><div class="v">865</div><div class="l">金币</div></div>
         </div>
 
         <div class="sec-h">近七日答题</div>
@@ -380,7 +314,7 @@
         </div>
       </div>
     </div>
-    <figcaption><span class="no">01</span><span class="name">个人中心 · 学习分析</span><span class="note">统计卡 + 七日答题柱状图 + 知识树（气泡节点）+ 历史复盘列表，对应需求 6"后台分析"</span></figcaption>
+    <figcaption><span class="no">01</span><span class="name">个人中心 · 学习分析</span><span class="note">统计卡（含答题金币余额）+ 七日答题柱状图 + 知识树（气泡节点）+ 历史复盘列表，对应需求 6"后台分析"</span></figcaption>
   </figure>
 
   <!-- ② 错题本 · 旧识重温 -->
@@ -471,62 +405,7 @@
     <figcaption><span class="no">03</span><span class="name">多格式输入</span><span class="note">P1 输入扩展：上传 PDF/Word、网页 URL、视频链接三类入口 + 最近解析记录；对应需求"多格式源信息解析"</span></figcaption>
   </figure>
 
-  <!-- ④ 好友 PK -->
-  <figure class="screen">
-    <div class="phone">
-      <div class="statusbar"><span>5:01</span><span class="capsule"><i></i><i></i><i></i></span></div>
-      <div class="body">
-        <div class="chapter">P2 · 湖畔对弈</div>
-        <div class="pk-arena">
-          <div class="pk-title">— 随机匹配 · 物理领域 —</div>
-          <span class="pk-match-tag">⚔ 计分对局</span>
-          <div class="pk-players">
-            <div class="pk-player card">
-              <div class="mini-avatar">林</div>
-              <div class="pn">林中客</div>
-              <div class="rank">黄金 · 1300</div>
-              <div class="score">3</div>
-              <div class="bar"><div class="fill" style="width:60%"></div></div>
-            </div>
-            <div class="pk-vs">VS</div>
-            <div class="pk-player opp card">
-              <div class="mini-avatar">湖</div>
-              <div class="pn">湖心亭</div>
-              <div class="rank">白银 · 1100</div>
-              <div class="score">2</div>
-              <div class="bar"><div class="fill" style="width:40%;background:var(--wood)"></div></div>
-            </div>
-          </div>
-
-          <div class="pk-question card">
-            <div class="q">第 4 题 · 下列说法中，能证明光具有波动性的是？</div>
-            <span class="timer">各自作答 · 本局剩余 0:12</span>
-          </div>
-        </div>
-
-        <div class="option" style="display:flex;align-items:flex-start;gap:12px;padding:12px 14px;margin:10px 0;border-radius:12px;background:var(--page);border:1px solid rgba(139,111,71,.18)">
-          <span style="width:22px;height:22px;border-radius:7px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:12px;color:var(--wood);border:1px solid rgba(139,111,71,.35);background:#FAF6EC">A</span>
-          <span style="font-size:12.5px;line-height:1.6;padding-top:2px">光电效应</span>
-        </div>
-        <div class="option" style="display:flex;align-items:flex-start;gap:12px;padding:12px 14px;margin:0 0 10px;border-radius:12px;background:var(--page);border:1px solid rgba(139,111,71,.18)">
-          <span style="width:22px;height:22px;border-radius:7px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:12px;color:var(--wood);border:1px solid rgba(139,111,71,.35);background:#FAF6EC">B</span>
-          <span style="font-size:12.5px;line-height:1.6;padding-top:2px">光的干涉与衍射</span>
-        </div>
-
-        <div class="sec-h">最近对局 · 积分变动</div>
-        <div class="card recent">
-          <div class="row"><span class="f">vs 湖心亭 · 胜 3:2</span><span class="s">昨天 · 积分 +8</span></div>
-          <div class="row"><span class="f">vs 松间照 · 负 2:5</span><span class="s">前天 · 积分 −24</span></div>
-          <div class="row"><span class="f">vs 竹里馆 · 友谊赛胜</span><span class="s">3 天前 · 不计分</span></div>
-        </div>
-
-        <button class="btn-primary" style="margin-top:auto">邀请好友 PK · 友谊赛不计分</button>
-      </div>
-    </div>
-    <figcaption><span class="no">04</span><span class="name">好友 PK 对战</span><span class="note">P2 社交裂变：实时对战，双方各自作答同套 5 题比总分（平局看用时）；结算按分领域积分，段位+积分常驻展示；好友邀请局为友谊赛不计分（防互刷）</span></figcaption>
-  </figure>
-
-  <!-- ⑤ 排行榜 -->
+  <!-- ④ 金币排行榜 -->
   <figure class="screen">
     <div class="phone">
       <div class="statusbar"><span>5:02</span><span class="capsule"><i></i><i></i><i></i></span></div>
@@ -534,86 +413,47 @@
         <div class="chapter">P2 · 湖畔名人堂</div>
 
         <div class="rank-tabs">
-          <span class="rank-tab">全部</span>
-          <span class="rank-tab on">物理学</span>
-          <span class="rank-tab">文学</span>
+          <span class="rank-tab on">全服</span>
+          <span class="rank-tab">好友</span>
         </div>
 
         <div class="rank-item card top">
           <span class="badge">🥇</span>
-          <div class="info"><div class="n">追光者</div><div class="s">钻石段位 · 47 场 · 胜率 72%</div></div>
+          <div class="info"><div class="n">追光者</div><div class="s">答题 47 次 · 正确率 72%</div></div>
           <span class="pts">1,568</span>
         </div>
         <div class="rank-item card top">
           <span class="badge">🥈</span>
-          <div class="info"><div class="n">量子小猫</div><div class="s">铂金段位 · 31 场 · 胜率 68%</div></div>
+          <div class="info"><div class="n">量子小猫</div><div class="s">答题 31 次 · 正确率 68%</div></div>
           <span class="pts">1,442</span>
         </div>
         <div class="rank-item card top">
           <span class="badge">🥉</span>
-          <div class="info"><div class="n">湖畔诗人</div><div class="s">铂金段位 · 22 场 · 胜率 65%</div></div>
+          <div class="info"><div class="n">湖畔诗人</div><div class="s">答题 22 次 · 正确率 65%</div></div>
           <span class="pts">1,398</span>
         </div>
 
         <div class="sec-h">其他漫游者</div>
         <div class="rank-item card">
           <span class="no">07</span>
-          <div class="info"><div class="n">松间照</div><div class="s">黄金段位 · 18 场 · 胜率 61%</div></div>
+          <div class="info"><div class="n">松间照</div><div class="s">答题 18 次 · 正确率 61%</div></div>
           <span class="pts">1,290</span>
         </div>
         <div class="rank-item card me">
           <span class="no">12</span>
-          <div class="info"><div class="n">林中客（我）</div><div class="s">白银段位 · 8 场 · 距黄金还差 130 分</div></div>
+          <div class="info"><div class="n">林中客（我）</div><div class="s">答题 8 次 · 距上一名还差 170 金币</div></div>
           <span class="pts">1,120</span>
         </div>
         <div class="rank-item card">
           <span class="no">13</span>
-          <div class="info"><div class="n">雾中来</div><div class="s">白银段位 · 7 场 · 胜率 43%</div></div>
+          <div class="info"><div class="n">雾中来</div><div class="s">答题 7 次 · 正确率 43%</div></div>
           <span class="pts">1,105</span>
         </div>
 
-        <button class="btn-primary" style="margin-top:auto">向第 11 名发起挑战</button>
+        <button class="btn-primary" style="margin-top:auto">去闯关赚金币 <span style="font-family:var(--serif)">→</span></button>
       </div>
     </div>
-    <figcaption><span class="no">05</span><span class="name">排行榜</span><span class="note">P2 分领域积分榜：榜单分仅来自随机匹配 PK 结算（好友局不计分），≥3 场对局才上榜；段位徽章 + 我的排名高亮</span></figcaption>
-  </figure>
-
-  <!-- ⑥ VIP -->
-  <figure class="screen">
-    <div class="phone">
-      <div class="statusbar"><span>5:03</span><span class="capsule"><i></i><i></i><i></i></span></div>
-      <div class="body">
-        <div class="chapter">P3 · 湖畔书房</div>
-        <div class="vip-hero">
-          <div class="crown">👑</div>
-          <div class="t">湖畔会员</div>
-          <div class="s">让每一次漫步都更深、更远</div>
-        </div>
-
-        <div class="card perks">
-          <div class="row"><span class="mk">✓</span>每日无限次闯关（免费版每日 3 次）</div>
-          <div class="row"><span class="mk">✓</span>超大文档解析 · 视频链接出题</div>
-          <div class="row"><span class="mk">✓</span>AI 深度复盘报告 + 专属海报</div>
-          <div class="row"><span class="mk">✓</span>艾宾浩斯智能重温计划</div>
-        </div>
-
-        <div class="card plan">
-          <div><div class="pname">月度会员</div><div class="pdesc">灵活体验 · 随时续费</div></div>
-          <div class="price"><span class="p">¥12</span><span class="pp">/ 月</span></div>
-        </div>
-        <div class="card plan best">
-          <div><div class="pname">年度会员<span class="best-tag">最受欢迎</span></div><div class="pdesc">日均仅 ¥0.26 · 立省 ¥45</div></div>
-          <div class="price"><span class="p">¥98</span><span class="pp">/ 年</span></div>
-        </div>
-        <div class="card plan">
-          <div><div class="pname">终身会员</div><div class="pdesc">一次购买 · 湖畔永久居住</div></div>
-          <div class="price"><span class="p">¥298</span><span class="pp">/ 终身</span></div>
-        </div>
-
-        <button class="btn-primary" style="margin-top:auto;background:linear-gradient(135deg,#E9C87E,var(--dawn));box-shadow:0 3px 0 #B08330">立即开通</button>
-      </div>
-    </div>
-    <figcaption><span class="no">06</span><span class="name">VIP 会员</span><span class="note">P3 商业闭环：特权清单 + 三档订阅（年度推荐），金色"湖畔书房"主题与整体风格统一</span></figcaption>
+    <figcaption><span class="no">04</span><span class="name">金币排行榜</span><span class="note">P2 留存激励：按累计答题金币排序（答对 +10 / 答错 −5，余额不为负）；≥3 次闯关才上榜；好友榜展示微信好友间排名</span></figcaption>
   </figure>
 
 </main>
