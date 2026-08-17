@@ -80,6 +80,7 @@ export default function QuizPage() {
     setSettling(true)
     Taro.setStorageSync('quiz_answers', answers)
     Taro.setStorageSync('quiz_duration', Math.round((Date.now() - startTimeRef.current) / 1000))
+    Taro.removeStorageSync('session_result')
     try {
       const result = await submitSession({
         session_key: sessionKeyRef.current,

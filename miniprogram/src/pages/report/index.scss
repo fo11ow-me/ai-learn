@@ -77,6 +77,16 @@
   }
 }
 
+// 报告页本关金币（结算式入账结果展示）
+.coin-line {
+  margin-top: 8rpx;
+  font-size: 22rpx;
+  font-family: $font-serif;
+
+  &.gain { color: $moss; }
+  &.loss { color: $maple; }
+}
+
 // 知识总结
 .summary {
   padding: 28rpx 32rpx;

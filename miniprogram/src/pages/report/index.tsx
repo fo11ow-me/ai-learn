@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Button, Text, View } from '@tarojs/components'
 import Taro, { useShareAppMessage } from '@tarojs/taro'
 import { createReportTask, getReportTask } from '../../api/report'
+import { getSession, SessionDetail, SessionSubmitResult } from '../../api/user'
 import { usePollingTask } from '../../hooks/usePollingTask'
 import { useStatusBarHeight } from '../../hooks/useStatusBarHeight'
 import { Quiz } from '../../types/quiz'
@@ -14,11 +15,20 @@ const NUM = ['壹', '贰', '叁', '肆']
 const LAKE = '#3A6B5C'
 
 export default function ReportPage() {
+  // 路由参数：mode=history&id={session_id} 为历史报告查看；否则为新报告流程
+  const params = useMemo(() => Taro.getCurrentInstance().router?.params ?? {}, [])
+  const historyId = params.mode === 'history' && params.id ? Number(params.id) : null
+
   const [quiz] = useState<Quiz | null>(() => (Taro.getStorageSync('quiz_data') as Quiz) || null)
   const [answers] = useState<AnswerRecord[]>(() => (Taro.getStorageSync('quiz_answers') as AnswerRecord[]) || [])
   const [duration] = useState<number>(() => Number(Taro.getStorageSync('quiz_duration')) || 0)
+  const [sessionResult] = useState<SessionSubmitResult | null>(
+    () => (Taro.getStorageSync('session_result') as SessionSubmitResult) || null,
+  )
   const [taskId, setTaskId] = useState<string | null>(null)
   const [createError, setCreateError] = useState<TaskError | null>(null)
+  const [history, setHistory] = useState<SessionDetail | null>(null)
+  const [historyError, setHistoryError] = useState<TaskError | null>(null)
   const statusBarHeight = useStatusBarHeight()
   const pageStyle = { paddingTop: `${statusBarHeight}px` }
 
@@ -27,13 +37,20 @@ export default function ReportPage() {
     return { status: resp.status, error: resp.error, data: resp.report }
   })
 
-  // 进入页面即创建报告任务（quiz + answers 从 Storage 读取）
+  // 历史模式：读库渲染（WHY：不再调 AI，零成本）；新报告模式：创建任务并关联 session_id
   useEffect(() => {
+    if (historyId) {
+      getSession(historyId)
+        .then(setHistory)
+        .catch((e) => setHistoryError(e as TaskError))
+      return
+    }
     if (!quiz) return
-    createReportTask({ quiz, answers })
+    createReportTask({ quiz, answers, session_id: sessionResult?.session_id })
       .then((r) => setTaskId(r.task_id))
       .catch((e) => setCreateError(e as TaskError))
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [historyId])
 
   // 报告生成完成 → 写入 Storage（海报页读取）
   useEffect(() => {
@@ -43,34 +60,44 @@ export default function ReportPage() {
   }, [polling.status, polling.data])
 
   useShareAppMessage(() => ({
-    title: report ? `「${quiz?.topic}」${report.quote}` : 'AI 闯关学习',
+    title: report ? `「${reportTopic}」${report.quote}` : 'AI 闯关学习',
     path: '/pages/index/index',
   }))
 
-  const report = polling.data
-  const loading = taskId !== null && (polling.status === 'pending' || polling.status === 'running')
-  const failed = polling.status === 'failed'
+  const report: Report | null = historyId ? (history?.report ?? null) : polling.data
+  const reportTopic: string = historyId ? (history?.topic ?? '') : (quiz?.topic ?? '')
+  const loading = historyId
+    ? history === null && historyError === null
+    : taskId !== null && (polling.status === 'pending' || polling.status === 'running')
+  const failed = historyId
+    ? historyError !== null || (history !== null && history.report === null)
+    : polling.status === 'failed' || createError !== null
+  const failedMessage = historyId
+    ? (historyError?.message ?? (history !== null && history.report === null ? '该次报告生成失败，仅保留题目与判分记录' : ''))
+    : (polling.error?.message || createError?.message || '')
+  const coinsDelta = historyId ? (history?.coins_delta ?? 0) : (sessionResult?.coins_delta ?? 0)
   const durationText = `${Math.floor(duration / 60)} 分 ${duration % 60} 秒`
 
-  /** 重试：重新创建报告任务 */
+  /** 重试（新报告模式）：重新创建报告任务 */
   const handleRetry = () => {
     if (!quiz) return
     setTaskId(null)
     setCreateError(null)
-    createReportTask({ quiz, answers })
+    createReportTask({ quiz, answers, session_id: sessionResult?.session_id })
       .then((r) => setTaskId(r.task_id))
       .catch((e) => setCreateError(e as TaskError))
   }
 
-  /** 再闯一关：清 Storage 回主页 */
+  /** 再闯一关（新报告模式）：清 Storage 回主页 */
   const handleAgain = () => {
     Taro.removeStorageSync('quiz_data')
     Taro.removeStorageSync('quiz_answers')
     Taro.removeStorageSync('quiz_duration')
+    Taro.removeStorageSync('session_result')
     Taro.reLaunch({ url: '/pages/index/index' })
   }
 
-  if (!quiz) {
+  if (!historyId && !quiz) {
     return (
       <View className='page' style={pageStyle}>
         <View className='empty'>
@@ -108,11 +135,10 @@ export default function ReportPage() {
         <View className='body'>
           <View className='chapter'>CHAP. 03 · 归程</View>
           <View className='loading-center'>
-            <View className='error-msg'>
-              {polling.error?.message || createError?.message}
-            </View>
-            <Button className='btn-primary retry-btn' onClick={handleRetry}>重试</Button>
-            <Button className='btn-ghost retry-btn' onClick={() => Taro.navigateBack()}>返回闯关</Button>
+            <View className='error-msg'>{failedMessage}</View>
+            {!historyId && <Button className='btn-primary retry-btn' onClick={handleRetry}>重试</Button>}
+            {!historyId && <Button className='btn-ghost retry-btn' onClick={() => Taro.navigateBack()}>返回闯关</Button>}
+            {historyId && <Button className='btn-ghost retry-btn' onClick={() => Taro.navigateBack()}>返回我的</Button>}
           </View>
         </View>
       </View>
@@ -137,10 +163,16 @@ export default function ReportPage() {
             </View>
           </View>
           <View className='meta'>
-            <View className='stamp'>湖畔漫步完成</View>
+            <View className='stamp'>{historyId ? '林间回望' : '湖畔漫步完成'}</View>
             <View className='sub'>
-              答对 {report.correct_count} / {report.total_questions} 题 · 用时 {durationText}
+              答对 {report.correct_count} / {report.total_questions} 题
+              {historyId ? '' : ` · 用时 ${durationText}`}
             </View>
+            {coinsDelta !== 0 && (
+              <View className={`coin-line ${coinsDelta > 0 ? 'gain' : 'loss'}`}>
+                {historyId ? '该关金币' : '本关金币'} {coinsDelta > 0 ? `+${coinsDelta}` : coinsDelta}
+              </View>
+            )}
           </View>
         </View>
 
@@ -174,12 +206,18 @@ export default function ReportPage() {
           <Text className='q'>“{report.quote}”</Text>
         </View>
 
-        <View className='btn-row'>
-          <Button className='btn-primary' onClick={() => Taro.navigateTo({ url: '/pages/poster/index' })}>
-            生成分享海报
-          </Button>
-          <Button className='btn-ghost' onClick={handleAgain}>再闯一关</Button>
-        </View>
+        {historyId ? (
+          <View className='btn-row'>
+            <Button className='btn-primary' onClick={() => Taro.navigateBack()}>返回我的</Button>
+          </View>
+        ) : (
+          <View className='btn-row'>
+            <Button className='btn-primary' onClick={() => Taro.navigateTo({ url: '/pages/poster/index' })}>
+              生成分享海报
+            </Button>
+            <Button className='btn-ghost' onClick={handleAgain}>再闯一关</Button>
+          </View>
+        )}
       </View>
     </View>
   )

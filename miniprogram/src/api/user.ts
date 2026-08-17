@@ -1,5 +1,5 @@
 import { request } from './request'
-import { AnswerRecord } from '../types/report'
+import { AnswerRecord, Report } from '../types/report'
 import { Quiz } from '../types/quiz'
 
 /** 个人中心全量数据（GET /user/me，契约见方案设计文档-用户系统 5.2） */
@@ -46,4 +46,26 @@ export interface SessionSubmitResult {
 /** 闯关结算（POST /user/session，同步；未登录 401 时由 request 层重登重试） */
 export function submitSession(payload: SessionSubmitPayload): Promise<SessionSubmitResult> {
   return request({ url: '/user/session', method: 'POST', data: payload })
+}
+
+/** 历史闯关详情（GET /user/session/{id}，契约见方案设计文档-用户系统 5.2） */
+export interface SessionDetail {
+  id: number
+  topic: string
+  content: string
+  total_questions: number
+  correct_count: number
+  correct_rate: number
+  coins_delta: number
+  coins_counted: boolean
+  quiz: Quiz
+  answers: AnswerRecord[]
+  /** 未生成（生成失败/未关联）时为 null */
+  report: Report | null
+  created_at: string
+}
+
+/** 历史闯关详情 */
+export function getSession(id: number): Promise<SessionDetail> {
+  return request({ url: `/user/session/${id}`, method: 'GET' })
 }

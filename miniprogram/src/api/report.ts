@@ -9,10 +9,12 @@ export interface ReportTaskResponse {
   error?: TaskError
 }
 
-/** POST /report 请求体：题库 + 作答记录 */
+/** POST /report 请求体：题库 + 作答记录 + 可选闯关记录 id（报告完成后回写） */
 export interface ReportCreatePayload {
   quiz: Quiz
   answers: AnswerRecord[]
+  /** 可选：闯关结算返回的 session_id（报告完成后回写报告到该记录） */
+  session_id?: number
 }
 
 /** 创建报告任务（POST /report → 202 {task_id}） */
