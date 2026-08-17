@@ -28,7 +28,11 @@ export default function QuizPage() {
   const [coinTag, setCoinTag] = useState<{ delta: number } | null>(null)
   const startTimeRef = useRef(Date.now()) // 进入页面计时，报告页展示用时
   // 结算幂等键：挂载时生成一次并复用（后端 (user_id, session_key) 唯一，同键重试转译首次结果）
-  const sessionKeyRef = useRef(makeSessionKey())
+  // 惰性初始化（WHY：useRef 参数每次渲染都会求值，直接传 makeSessionKey() 会反复生成新键，破坏幂等）
+  const sessionKeyRef = useRef<string | null>(null)
+  if (sessionKeyRef.current === null) {
+    sessionKeyRef.current = makeSessionKey()
+  }
   const statusBarHeight = useStatusBarHeight()
   const pageStyle = { paddingTop: `${statusBarHeight}px` }
 
@@ -83,7 +87,7 @@ export default function QuizPage() {
     Taro.removeStorageSync('session_result')
     try {
       const result = await submitSession({
-        session_key: sessionKeyRef.current,
+        session_key: sessionKeyRef.current!,
         content: (Taro.getStorageSync('quiz_content') as string) || quiz.topic,
         quiz,
         answers,
@@ -91,6 +95,13 @@ export default function QuizPage() {
       Taro.setStorageSync('session_result', result)
     } catch (e) {
       // 未登录/网络失败：不阻断报告流程（本关金币不计，下次登录后重新闯关可计）
+      // 方案 7.2 契约：401/未登录提示「登录后可积累金币」，其余失败提示不计金币
+      const code = e?.code
+      if (code === 'UNAUTHORIZED' || code === 'TOKEN_EXPIRED') {
+        Taro.showToast({ title: '登录后可积累金币', icon: 'none' })
+      } else {
+        Taro.showToast({ title: '结算失败，本关不计金币', icon: 'none' })
+      }
       console.warn('闯关结算失败，本关不计金币：', e)
     } finally {
       // navigateTo 后复位 settling：navigateBack 返回闯关页时按钮不再卡「结算中…」（复按已由 disabled 阻断）

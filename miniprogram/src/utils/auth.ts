@@ -39,10 +39,11 @@ export function clearAuth(): void {
 /**
  * 静默登录（WHY：wx.login 无感换 code → 后端换 openid + JWT；失败时调用方降级为游客体验，不阻断闯关）
  * 已有 token 直接复用；无 token 才发起登录。登录请求不经 request 封装（WHY：避免 request→auth 循环依赖）
+ * @returns 登录用户摘要；token 在而用户缓存缺失时返回 null（本地缓存不一致，非致命）
  */
-export async function ensureLogin(): Promise<UserBrief> {
+export async function ensureLogin(): Promise<UserBrief | null> {
   if (getToken()) {
-    return getUser() as UserBrief
+    return getUser()
   }
   const { code } = await Taro.login()
   const resp = await new Promise<LoginResponse>((resolve, reject) => {
