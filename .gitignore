@@ -1,3 +1,6 @@
 .claude
 .playwright-mcp
 .env
+
+# 微信开发者工具个人私有配置（编辑器布局等，机器相关不入库）
+project.private.config.json
