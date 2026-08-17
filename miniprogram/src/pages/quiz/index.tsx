@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from 'react'
 import { Button, Text, View } from '@tarojs/components'
 import Taro from '@tarojs/taro'
+import { submitSession } from '../../api/user'
 import { useStatusBarHeight } from '../../hooks/useStatusBarHeight'
 import { Question, Quiz } from '../../types/quiz'
 import { AnswerRecord } from '../../types/report'
@@ -23,7 +24,11 @@ export default function QuizPage() {
   const [selected, setSelected] = useState<number[]>([])
   const [answered, setAnswered] = useState(false)
   const [answers, setAnswers] = useState<AnswerRecord[]>([])
+  const [settling, setSettling] = useState(false)
+  const [coinTag, setCoinTag] = useState<{ delta: number } | null>(null)
   const startTimeRef = useRef(Date.now()) // 进入页面计时，报告页展示用时
+  // 结算幂等键：挂载时生成一次并复用（后端 (user_id, session_key) 唯一，同键重试转译首次结果）
+  const sessionKeyRef = useRef(makeSessionKey())
   const statusBarHeight = useStatusBarHeight()
   const pageStyle = { paddingTop: `${statusBarHeight}px` }
 
@@ -58,19 +63,39 @@ export default function QuizPage() {
     setSelected(finalSelected)
     setAnswered(true)
     setAnswers((prev) => [...prev, { question_id: question.id, selected: finalSelected }])
+    // 逐题金币提示（本地即时反馈，与实际入账以结算为准——防刷/封底会修正）
+    const correctNow = [...finalSelected].sort().join(',') === [...question.answer].sort().join(',')
+    setCoinTag({ delta: correctNow ? 10 : -5 })
   }
 
-  /** 下一题 / 查看报告 */
-  const handleNext = () => {
+  /** 下一题 / 结算并查看报告（WHY：最后一题先同步结算金币再进报告页，报告生成期间无需等待） */
+  const handleNext = async () => {
     if (!isLast) {
       setCurrent((c) => c + 1)
       setSelected([])
       setAnswered(false)
+      setCoinTag(null)
       return
     }
+    setSettling(true)
     Taro.setStorageSync('quiz_answers', answers)
     Taro.setStorageSync('quiz_duration', Math.round((Date.now() - startTimeRef.current) / 1000))
-    Taro.navigateTo({ url: '/pages/report/index' })
+    try {
+      const result = await submitSession({
+        session_key: sessionKeyRef.current,
+        content: (Taro.getStorageSync('quiz_content') as string) || quiz.topic,
+        quiz,
+        answers,
+      })
+      Taro.setStorageSync('session_result', result)
+    } catch (e) {
+      // 未登录/网络失败：不阻断报告流程（本关金币不计，下次登录后重新闯关可计）
+      console.warn('闯关结算失败，本关不计金币：', e)
+    } finally {
+      // navigateTo 后复位 settling：navigateBack 返回闯关页时按钮不再卡「结算中…」（复按已由 disabled 阻断）
+      Taro.navigateTo({ url: '/pages/report/index' })
+      setSettling(false)
+    }
   }
 
   // 无数据（异常入口）→ 引导回主页
@@ -129,6 +154,11 @@ export default function QuizPage() {
             <View className={`verdict ${isCorrect ? 'right' : 'wrong'}`}>
               <View className='dot' />
               <Text className='t'>{isCorrect ? '答对了 · 涟漪泛起' : '这条小径，值得再走一遍'}</Text>
+              {coinTag && (
+                <Text className={`coin-tag ${coinTag.delta > 0 ? 'gain' : 'loss'}`}>
+                  {coinTag.delta > 0 ? `+${coinTag.delta}` : coinTag.delta} 金币
+                </Text>
+              )}
             </View>
             <View className='explain'>
               <View className='h'>知识讲解</View>
@@ -142,13 +172,18 @@ export default function QuizPage() {
           <Button className='btn-primary next-btn' onClick={() => submit(selected)}>提交答案</Button>
         )}
         {answered && (
-          <Button className='btn-primary next-btn' onClick={handleNext}>
-            {isLast ? '查看报告' : '下一题'} <Text className='arrow'>→</Text>
+          <Button className='btn-primary next-btn' onClick={handleNext} loading={settling} disabled={settling}>
+            {settling ? '结算中…' : (isLast ? '查看报告' : '下一题')} <Text className='arrow'>→</Text>
           </Button>
         )}
       </View>
     </View>
   )
+}
+
+/** 生成结算幂等键（hex + 短横线，符合后端 session_key 校验规则） */
+function makeSessionKey(): string {
+  return `${Date.now().toString(16)}-${Math.random().toString(16).slice(2, 12)}`
 }
 
 type OptionState = 'normal' | 'right' | 'wrong' | 'dim'

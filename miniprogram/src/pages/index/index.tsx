@@ -44,6 +44,7 @@ export default function Index() {
   useEffect(() => {
     if (polling.status === 'completed' && polling.data) {
       Taro.setStorageSync('quiz_data', polling.data)
+      Taro.setStorageSync('quiz_content', content)  // 新增：结算/防刷需要用户输入原文
       Taro.removeStorageSync('quiz_answers')
       Taro.removeStorageSync('quiz_duration')
       Taro.navigateTo({ url: '/pages/quiz/index' })

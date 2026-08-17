@@ -1,4 +1,6 @@
 import { request } from './request'
+import { AnswerRecord } from '../types/report'
+import { Quiz } from '../types/quiz'
 
 /** 个人中心全量数据（GET /user/me，契约见方案设计文档-用户系统 5.2） */
 export interface UserProfile {
@@ -20,4 +22,28 @@ export function updateMe(payload: { nickname: string }): Promise<UserProfile['us
 /** 个人中心全量数据 */
 export function getMe(): Promise<UserProfile> {
   return request({ url: '/user/me', method: 'GET' })
+}
+
+/** 闯关结算请求（幂等键 + 用户输入原文 + 题库 + 作答；契约见方案设计文档-用户系统 5.2） */
+export interface SessionSubmitPayload {
+  session_key: string
+  content: string
+  quiz: Quiz
+  answers: AnswerRecord[]
+}
+
+/** 闯关结算响应 */
+export interface SessionSubmitResult {
+  session_id: number
+  /** 本关金币变动（防刷时为 0；可能为负） */
+  coins_delta: number
+  /** 本次是否计入金币 */
+  coins_counted: boolean
+  /** 最新余额 */
+  coins_total: number
+}
+
+/** 闯关结算（POST /user/session，同步；未登录 401 时由 request 层重登重试） */
+export function submitSession(payload: SessionSubmitPayload): Promise<SessionSubmitResult> {
+  return request({ url: '/user/session', method: 'POST', data: payload })
 }

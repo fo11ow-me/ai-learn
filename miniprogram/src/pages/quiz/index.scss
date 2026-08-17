@@ -218,6 +218,17 @@
   }
 }
 
+// 逐题金币提示（答对 +10 苔绿 / 答错 −5 枫红，沿用 verdict 配色体系）
+.coin-tag {
+  margin-left: auto;
+  font-size: 22rpx;
+  font-weight: 600;
+  font-family: $font-serif;
+
+  &.gain { color: $moss; }
+  &.loss { color: $maple; }
+}
+
 // 讲解卡（纸页质感 + 左侧木纹线；margin-bottom 保证按钮贴底时与讲解卡的最小间距）
 .explain {
   padding: 28rpx 32rpx;
