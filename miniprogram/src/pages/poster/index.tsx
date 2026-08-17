@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Button, Canvas, View } from '@tarojs/components'
 import Taro, { useReady, useShareAppMessage } from '@tarojs/taro'
-import { BASE_URL } from '../../api/request'
+import { BASE_URL } from '../../config'
 import { useStatusBarHeight } from '../../hooks/useStatusBarHeight'
 import { Quiz } from '../../types/quiz'
 import { Report } from '../../types/report'

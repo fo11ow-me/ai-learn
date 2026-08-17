@@ -36,7 +36,7 @@ export type TaskStatus = 'pending' | 'running' | 'completed' | 'failed'
 
 /** 任务失败信息：错误码 + 用户可读文案 */
 export interface TaskError {
-  /** LLM_TIMEOUT / LLM_PARSE_FAILED / LLM_UNAVAILABLE / TASK_TIMEOUT / SENSITIVE_CONTENT */
+  /** LLM_TIMEOUT / LLM_PARSE_FAILED / LLM_UNAVAILABLE / TASK_TIMEOUT / SENSITIVE_CONTENT / UNAUTHORIZED / TOKEN_EXPIRED / INVALID_NICKNAME / NOT_FOUND */
   code: string
   message: string
 }
