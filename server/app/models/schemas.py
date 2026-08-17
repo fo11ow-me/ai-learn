@@ -74,10 +74,11 @@ class AnswerRecord(BaseModel):
 
 
 class ReportRequest(BaseModel):
-    """报告生成请求（方案文档 4.1）：作答必须覆盖全部题目、索引合法、单选/判断只选一项"""
+    """报告生成请求（方案文档 4.1 + 用户系统：可选 session_id 关联闯关记录）"""
 
     quiz: QuizSchema
     answers: list[AnswerRecord] = Field(min_length=TOTAL_QUESTIONS, max_length=TOTAL_QUESTIONS)
+    session_id: int | None = None  # 可选：报告完成后回写对应 quiz_sessions.report_json
 
     @model_validator(mode="after")
     def _check_answers(self) -> "ReportRequest":

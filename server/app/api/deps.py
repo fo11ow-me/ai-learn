@@ -47,3 +47,23 @@ async def get_current_user(request: Request) -> User:
     if user is None:
         raise HTTPException(status_code=401, detail={"code": "UNAUTHORIZED", "message": "未登录"})
     return user
+
+
+async def get_optional_user(request: Request) -> User | None:
+    """可选鉴权（WHY：匿名仍可生成报告（不落库）——需求文档 4.6 游客模式；带 session_id 时路由层再强校验）"""
+    from sqlalchemy import select
+
+    from app.core.config import get_settings
+    from app.models.db_models import User
+    from app.services.auth import AuthError, decode_token
+
+    header = request.headers.get("Authorization", "")
+    if not header.startswith("Bearer "):
+        return None
+    try:
+        user_id = decode_token(header[7:], get_settings())
+    except AuthError:
+        return None  # token 无效视为游客，不阻断匿名生成报告
+    db_engine = request.app.state.db
+    async with db_engine.maker() as db:
+        return await db.scalar(select(User).where(User.id == user_id))

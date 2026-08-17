@@ -16,6 +16,8 @@ async def run_report_task(
     sensitive: SensitiveFilter,
     settings: Settings,
     store: TaskStore = task_store,
+    session_id: int | None = None,
+    db_engine=None,  # DBEngine | None：报告完成后回写 report_json
 ) -> None:
     """后台执行报告任务：置 running → 生成（带整体超时）→ 合规检查 → 组装报告 → completed；
     任何失败写 failed + 错误码。store 默认模块级单例，测试可注入独立实例"""
@@ -41,6 +43,22 @@ async def run_report_task(
             quote=ai.quote,
         )
         store.update(task_id, status="completed", payload={"report": report.model_dump()})
+        if session_id is not None and db_engine is not None:
+            # 回写闯关记录（WHY：历史报告页直接读库，不再调 AI；回写失败仅记日志不置任务失败）
+            try:
+                from sqlalchemy import update
+
+                from app.models.db_models import QuizSession
+
+                async with db_engine.maker() as db:
+                    await db.execute(
+                        update(QuizSession)
+                        .where(QuizSession.id == session_id)
+                        .values(report_json=report.model_dump()))
+                    await db.commit()
+            except Exception as exc:  # 回写失败不影响已完成任务
+                import logging
+                logging.getLogger(__name__).warning("报告回写失败 session_id=%s: %s", session_id, exc)
     except TimeoutError:
         store.update(
             task_id, status="failed", error=TaskError(code="TASK_TIMEOUT", message="生成超时，请重试")
