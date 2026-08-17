@@ -1,7 +1,10 @@
 """路由依赖装配（WHY：生产首次请求时按真实配置惰性初始化；测试可预先写入 app.state 注入 fake）"""
-from fastapi import FastAPI
+from __future__ import annotations
+
+from fastapi import FastAPI, HTTPException, Request
 
 from app.core.config import get_settings
+from app.core.db import db_engine
 from app.core.sensitive import load_filter
 from app.core.tasks import task_store
 from app.services.llm import LLMClient
@@ -18,4 +21,29 @@ def deps(app: FastAPI):
         app.state.sensitive = load_filter(app.state.settings)
     if not hasattr(app.state, "store"):
         app.state.store = task_store
+    if not hasattr(app.state, "db"):
+        app.state.db = db_engine
     return app.state.llm, app.state.sensitive, app.state.store, app.state.settings
+
+
+async def get_current_user(request: Request) -> User:
+    """JWT 鉴权依赖（WHY：受保护路由声明 Depends(get_current_user) 即完成鉴权；失败统一 401）"""
+    from sqlalchemy import select
+
+    from app.core.config import get_settings
+    from app.models.db_models import User
+    from app.services.auth import AuthError, decode_token
+
+    header = request.headers.get("Authorization", "")
+    if not header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail={"code": "UNAUTHORIZED", "message": "未登录"})
+    try:
+        user_id = decode_token(header[7:], get_settings())
+    except AuthError as exc:
+        raise HTTPException(status_code=401, detail={"code": exc.code, "message": exc.message})
+    db_engine = request.app.state.db
+    async with db_engine.maker() as db:
+        user = await db.scalar(select(User).where(User.id == user_id))
+    if user is None:
+        raise HTTPException(status_code=401, detail={"code": "UNAUTHORIZED", "message": "未登录"})
+    return user

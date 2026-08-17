@@ -1,13 +1,29 @@
-"""FastAPI 应用入口：装配路由与后台任务"""
+"""FastAPI 应用入口：装配路由、CORS 与后台任务；启动时建表（WHY：开发期 create_all，不引入 Alembic）"""
+import logging
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.deps import deps
 from app.api.routes import health, qrcode, quiz, report
+
+_logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    deps(app)  # 惰性装配（含 app.state.db）
+    try:
+        await app.state.db.create_all()
+    except Exception as exc:  # MySQL 未启动时记录日志继续启动（WHY：不影响 /health 探活，DB 接口调用时再报错）
+        _logger.warning("数据库建表失败，请确认 MySQL 已启动（start-docker.ps1）：%s", exc)
+    yield
 
 
 def create_app() -> FastAPI:
     """应用工厂（WHY：测试可创建独立实例注入 fake 依赖，避免污染全局状态）"""
-    app = FastAPI(title="AI 闯关学习")
+    app = FastAPI(title="AI 闯关学习", lifespan=lifespan)
     # MVP 无认证，全放开 CORS（WHY：小程序无跨域限制，H5 编译版浏览器验证闭环需要）
     app.add_middleware(
         CORSMiddleware,
