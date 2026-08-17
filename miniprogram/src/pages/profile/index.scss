@@ -1,7 +1,5 @@
 @use '../../styles/variables.scss' as *;
 
-// 「我的」页（对齐扩展原型 02-extended-flow.html 屏 1 个人中心风格）
-// .body 用 flex:1 填满剩余（WHY：min-height:100vh 叠加状态栏内边距会把底部内容挤出视口）
 .page {
   min-height: 100vh;
   display: flex;
@@ -17,7 +15,16 @@
   box-sizing: border-box;
 }
 
-// 头像 + 昵称（P1 接入微信授权头像昵称）
+// 章节号（原型 .chapter）
+.chapter {
+  font-family: $font-serif;
+  font-size: 22rpx;
+  letter-spacing: 0.35em;
+  color: $wood;
+  text-transform: uppercase;
+}
+
+// 用户信息区
 .profile {
   display: flex;
   align-items: center;
@@ -40,11 +47,27 @@
   box-shadow: 0 4rpx 0 $lake-deep;
 }
 
+.profile .info { flex: 1; min-width: 0; }
+
+.name-row {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
 .profile .name {
   font-family: $font-serif;
   font-size: 34rpx;
   font-weight: 600;
   color: $ink;
+}
+
+.edit-btn {
+  font-size: 20rpx;
+  color: $lake;
+  border: 1rpx solid rgba(58, 107, 92, 0.4);
+  border-radius: 999rpx;
+  padding: 2rpx 14rpx;
 }
 
 .profile .sub {
@@ -54,45 +77,224 @@
   letter-spacing: 0.05em;
 }
 
-// 统计卡
+// 统计卡 4 张
 .stats-row {
   display: flex;
-  gap: 20rpx;
-  margin-top: 28rpx;
+  gap: 16rpx;
+  margin-top: 24rpx;
 }
 
 .stat {
   flex: 1;
-  padding: 24rpx 20rpx;
+  padding: 22rpx 10rpx;
   text-align: center;
 
   .v {
     font-family: $font-serif;
-    font-size: 38rpx;
+    font-size: 34rpx;
     font-weight: 600;
     color: $lake;
   }
 
   .l {
-    font-size: 20rpx;
+    font-size: 18rpx;
     color: $fog;
-    margin-top: 8rpx;
-    letter-spacing: 0.12em;
+    margin-top: 6rpx;
+    letter-spacing: 0.1em;
   }
 }
 
-// 空态卡
+// 分节标题（原型 .sec-h，右侧延长线）
+.sec-h {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  font-size: 22rpx;
+  color: $wood;
+  letter-spacing: 0.22em;
+  margin: 28rpx 0 16rpx;
+
+  &::after {
+    content: '';
+    flex: 1;
+    height: 1rpx;
+    background: rgba(139, 111, 71, 0.22);
+  }
+}
+
+// 近七日柱状图
+.chart {
+  padding: 24rpx 24rpx 12rpx;
+}
+
+.bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 16rpx;
+  height: 168rpx;
+  padding: 0 8rpx;
+}
+
+.bar-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10rpx;
+  height: 100%;
+  justify-content: flex-end;
+}
+
+.bar {
+  width: 100%;
+  border-radius: 8rpx 8rpx 4rpx 4rpx;
+  background: linear-gradient(180deg, $mist, $lake);
+
+  &.today {
+    background: linear-gradient(180deg, $dawn, #B08330);
+  }
+}
+
+.bar-col .d {
+  font-size: 18rpx;
+  color: $fog;
+}
+
+.legend {
+  display: flex;
+  justify-content: center;
+  gap: 28rpx;
+  font-size: 18rpx;
+  color: $fog;
+  padding: 14rpx 0 8rpx;
+
+  .dot {
+    display: inline-block;
+    width: 14rpx;
+    height: 14rpx;
+    border-radius: 4rpx;
+    margin-right: 8rpx;
+    vertical-align: -2rpx;
+  }
+
+  .normal { background: linear-gradient(180deg, $mist, $lake); }
+  .today-dot { background: linear-gradient(180deg, $dawn, #B08330); }
+}
+
+// 知识树（原型 SVG 树枝用 CSS 近似：主干 + 两斜枝 + 三节点，风格一致）
+.tree {
+  padding: 24rpx 28rpx;
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+}
+
+.tree-branch {
+  position: relative;
+  width: 96rpx;
+  height: 96rpx;
+  flex-shrink: 0;
+
+  &::before {
+    content: '';
+    position: absolute;
+    left: 48rpx;
+    top: 8rpx;
+    bottom: 0;
+    width: 3rpx;
+    background: $wood;
+    border-radius: 2rpx;
+  }
+}
+
+.twig {
+  position: absolute;
+  width: 42rpx;
+  height: 3rpx;
+  background: $wood;
+  border-radius: 2rpx;
+  transform-origin: left center;
+
+  &.twig-left { left: 6rpx; top: 40rpx; transform: rotate(-38deg); }
+  &.twig-right { left: 48rpx; top: 40rpx; transform: rotate(38deg); }
+}
+
+.node {
+  position: absolute;
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: 50%;
+  background: $mist;
+
+  &.node-top { left: 41rpx; top: 0; background: $lake; }
+  &.node-left { left: 2rpx; top: 34rpx; }
+  &.node-right { left: 78rpx; top: 34rpx; }
+}
+
+.leaves {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+}
+
+.leaf {
+  font-size: 20rpx;
+  color: $lake;
+  border: 1rpx solid rgba(58, 107, 92, 0.4);
+  background: #F2F6F1;
+  border-radius: 999rpx;
+  padding: 6rpx 20rpx;
+
+  &.core {
+    background: $lake;
+    color: #FBF8EF;
+    border-color: $lake;
+  }
+}
+
+// 最近复盘
+.recent {
+  padding: 8rpx 28rpx;
+  font-size: 24rpx;
+}
+
+.recent .row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18rpx 0;
+  border-bottom: 1rpx dashed rgba(139, 111, 71, 0.2);
+
+  &:last-child { border-bottom: none; }
+}
+
+.recent .f {
+  color: $ink;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recent .r { display: flex; align-items: center; gap: 10rpx; }
+
+.recent .s {
+  font-size: 20rpx;
+  color: $fog;
+}
+
+.recent .ok {
+  font-size: 20rpx;
+  color: $moss;
+}
+
+// 空态卡（沿用占位页设计）
 .empty-card {
-  margin-top: 32rpx;
+  margin-top: 40rpx;
   padding: 40rpx 32rpx;
   text-align: center;
-
-  .empty-leaf {
-    width: 72rpx;
-    height: 72rpx;
-    margin-bottom: 16rpx;
-    opacity: 0.85;
-  }
 
   .empty-title {
     font-family: $font-serif;
@@ -115,4 +317,45 @@
 
 .arrow {
   font-family: $font-serif;
+}
+
+// 编辑昵称弹层
+.mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(30, 43, 37, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.edit-card {
+  width: 560rpx;
+  padding: 36rpx 36rpx 28rpx;
+}
+
+.edit-title {
+  font-family: $font-serif;
+  font-size: 30rpx;
+  font-weight: 600;
+  color: $ink;
+  margin-bottom: 24rpx;
+}
+
+.edit-input {
+  background: $paper;
+  border: 1rpx solid rgba(139, 111, 71, 0.3);
+  border-radius: 12rpx;
+  padding: 16rpx 20rpx;
+  font-size: 26rpx;
+  color: $ink;
+}
+
+.edit-btns {
+  display: flex;
+  gap: 20rpx;
+  margin-top: 32rpx;
+
+  .btn-primary, .btn-ghost { flex: 1; height: 76rpx; font-size: 26rpx; }
 }
