@@ -17,6 +17,19 @@ const TYPE_LABEL: Record<Question['type'], string> = {
 /** 选项序号（所有题型统一 A-D，判断题 A/B，对齐原型屏 5） */
 const OPTION_KEYS = ['A', 'B', 'C', 'D']
 
+/** 自绘导航条（WHY：返回键固定回首页 tab —— 原生返回键仅返回上一页且页面栈单层时不可见，行为不可编程） */
+function NavBar() {
+  return (
+    <View className='nav-bar'>
+      <View className='nav-back' onClick={() => Taro.switchTab({ url: '/pages/index/index' })}>
+        <Text className='nav-back-icon'>{'<'}</Text>
+      </View>
+      <Text className='nav-title'>闯关</Text>
+      <View className='nav-side' />
+    </View>
+  )
+}
+
 export default function QuizPage() {
   // quiz 数据经 Storage 从主页传入（方案文档 3.5 页面数据流）
   const [quiz] = useState<Quiz | null>(() => (Taro.getStorageSync('quiz_data') as Quiz) || null)
@@ -114,6 +127,7 @@ export default function QuizPage() {
   if (!quiz || !question) {
     return (
       <View className='page' style={pageStyle}>
+        <NavBar />
         <View className='empty'>
           <View className='empty-msg'>题目数据丢失了，请回主页重新生成</View>
           <Button className='btn-primary' onClick={() => Taro.reLaunch({ url: '/pages/index/index' })}>
@@ -126,6 +140,7 @@ export default function QuizPage() {
 
   return (
     <View className='page' style={pageStyle}>
+      <NavBar />
       <View className='body'>
         <View className='quiz-top'>
           <Text className='count'>第 {current + 1} 题 / 共 {quiz.questions.length} 题</Text>

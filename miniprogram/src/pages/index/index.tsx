@@ -1,19 +1,22 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Button, Text, Textarea, View } from '@tarojs/components'
-import Taro from '@tarojs/taro'
+import Taro, { useDidShow } from '@tarojs/taro'
 import { createQuizTask, getQuizTask } from '../../api/quiz'
+import { getMe } from '../../api/user'
 import { usePollingTask } from '../../hooks/usePollingTask'
 import { useStatusBarHeight } from '../../hooks/useStatusBarHeight'
 import { Quiz } from '../../types/quiz'
 import { TaskError } from '../../types/report'
 import './index.scss'
 
-/** 示例主题（原型"或沿旧径重游"；MVP 无历史记录，点击填入输入框） */
-const TOPICS = [
+/** 兜底主题（未登录 / 无学习历史时展示；有历史时被最近学习主题替换） */
+const FALLBACK_TOPICS = [
   { title: '光的波粒二象性', tag: '物理学' },
   { title: '光合作用的全过程', tag: '生物学' },
   { title: '瓦尔登湖与超验主义', tag: '文学' },
 ]
+
+const MAX_TOPICS = 3  // 与现有布局一致（原型"或沿旧径重游"固定 3 张卡）
 
 /** 生成中轮播文案（原型屏 2，2.8s 间隔） */
 const LOADING_LINES = [
@@ -29,15 +32,38 @@ export default function Index() {
   const [content, setContent] = useState('')
   const [taskId, setTaskId] = useState<string | null>(null)
   const [createError, setCreateError] = useState<TaskError | null>(null)
+  // 最近学习主题（有历史时替换兜底主题，点击行为不变：填入输入框）
+  const [topics, setTopics] = useState<{ title: string; tag?: string }[]>(FALLBACK_TOPICS)
   const statusBarHeight = useStatusBarHeight()
   const pageStyle = { paddingTop: `${statusBarHeight}px` }
+
+  // 每次进入页面刷新最近学习主题（WHY：闯关后返回首页需展示最新历史；未登录/失败静默回退兜底主题）
+  const loadRecentTopics = useCallback(() => {
+    getMe()
+      .then((d) => {
+        const seen = new Set<string>()
+        const recent: { title: string }[] = []
+        for (const s of d.recent_sessions) {
+          if (recent.length >= MAX_TOPICS) break
+          if (!s.topic || seen.has(s.topic)) continue
+          seen.add(s.topic)
+          recent.push({ title: s.topic })
+        }
+        if (recent.length > 0) setTopics(recent)
+      })
+      .catch(() => {})  // 游客/网络异常：保持兜底主题，不打扰用户
+  }, [])
+
+  useEffect(loadRecentTopics, [loadRecentTopics])  // 首次挂载必拉取（WHY：H5 刷新时 onShow 早于组件挂载，useDidShow 会丢失）
+  useDidShow(loadRecentTopics)  // tab 切换/闯关返回时刷新
 
   const polling = usePollingTask<Quiz>(taskId, async (id) => {
     const resp = await getQuizTask(id)
     return { status: resp.status, error: resp.error, data: resp.quiz }
   })
 
-  const generating = taskId !== null && (polling.status === 'pending' || polling.status === 'running')
+  // 含 completed（WHY：出题完成瞬间保持加载屏直到 navigateTo 生效，否则会闪回首页表单再跳转）
+  const generating = taskId !== null && polling.status !== 'failed'
   const failed = taskId !== null && polling.status === 'failed'
 
   // 出题完成 → 写入 Storage 并进入闯关页（quiz 数据与作答记录经 Storage 传页）
@@ -47,7 +73,8 @@ export default function Index() {
       Taro.setStorageSync('quiz_content', content)  // 新增：结算/防刷需要用户输入原文
       Taro.removeStorageSync('quiz_answers')
       Taro.removeStorageSync('quiz_duration')
-      Taro.navigateTo({ url: '/pages/quiz/index' })
+      // 成功/失败都清空 taskId（WHY：成功不清则返回首页时 taskId 残留，generating 恒真卡在雾散屏；失败清空回表单可重试）
+      Taro.navigateTo({ url: '/pages/quiz/index' }).finally(() => setTaskId(null))
     }
   }, [polling.status, polling.data])
 
@@ -122,10 +149,10 @@ export default function Index() {
 
         <View className='divider'>或沿旧径重游</View>
 
-        {TOPICS.map((t) => (
+        {topics.map((t) => (
           <View key={t.title} className='topic-card card' onClick={() => setContent(t.title)}>
             <Text className='t'>{t.title}</Text>
-            <Text className='tag'>{t.tag}</Text>
+            {t.tag && <Text className='tag'>{t.tag}</Text>}
           </View>
         ))}
 

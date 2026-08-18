@@ -4,7 +4,6 @@ import Taro, { useShareAppMessage } from '@tarojs/taro'
 import { createReportTask, getReportTask } from '../../api/report'
 import { getSession, SessionDetail, SessionSubmitResult } from '../../api/user'
 import { usePollingTask } from '../../hooks/usePollingTask'
-import { useStatusBarHeight } from '../../hooks/useStatusBarHeight'
 import { Quiz } from '../../types/quiz'
 import { AnswerRecord, Report, TaskError } from '../../types/report'
 import './index.scss'
@@ -29,8 +28,6 @@ export default function ReportPage() {
   const [createError, setCreateError] = useState<TaskError | null>(null)
   const [history, setHistory] = useState<SessionDetail | null>(null)
   const [historyError, setHistoryError] = useState<TaskError | null>(null)
-  const statusBarHeight = useStatusBarHeight()
-  const pageStyle = { paddingTop: `${statusBarHeight}px` }
 
   const polling = usePollingTask<Report>(taskId, async (id) => {
     const resp = await getReportTask(id)
@@ -99,7 +96,7 @@ export default function ReportPage() {
 
   if (!historyId && !quiz) {
     return (
-      <View className='page' style={pageStyle}>
+      <View className='page'>
         <View className='empty'>
           <View className='empty-msg'>报告数据丢失了，请回主页重新闯关</View>
           <Button className='btn-primary' onClick={() => Taro.reLaunch({ url: '/pages/index/index' })}>
@@ -112,7 +109,7 @@ export default function ReportPage() {
 
   if (loading) {
     return (
-      <View className='page' style={pageStyle}>
+      <View className='page'>
         <View className='body'>
           <View className='chapter'>CHAP. 03 · 归程</View>
           <View className='loading-center'>
@@ -131,7 +128,7 @@ export default function ReportPage() {
 
   if (failed || createError) {
     return (
-      <View className='page' style={pageStyle}>
+      <View className='page'>
         <View className='body'>
           <View className='chapter'>CHAP. 03 · 归程</View>
           <View className='loading-center'>
@@ -148,7 +145,7 @@ export default function ReportPage() {
   if (!report) return null
 
   return (
-    <View className='page' style={pageStyle}>
+    <View className='page'>
       <View className='body'>
         <View className='chapter'>CHAP. 03 · 归程</View>
 

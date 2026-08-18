@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { Button, Canvas, View } from '@tarojs/components'
 import Taro, { useReady, useShareAppMessage } from '@tarojs/taro'
 import { BASE_URL } from '../../config'
-import { useStatusBarHeight } from '../../hooks/useStatusBarHeight'
 import { Quiz } from '../../types/quiz'
 import { Report } from '../../types/report'
 import './index.scss'
@@ -23,8 +22,6 @@ const QUOTE_LINE_HEIGHT = 38
 export default function PosterPage() {
   const [quiz] = useState<Quiz | null>(() => (Taro.getStorageSync('quiz_data') as Quiz) || null)
   const [report] = useState<Report | null>(() => (Taro.getStorageSync('report_data') as Report) || null)
-  const statusBarHeight = useStatusBarHeight()
-  const pageStyle = { paddingTop: `${statusBarHeight}px` }
 
   useShareAppMessage(() => ({
     title: report?.quote ? `「${quiz?.topic}」${report.quote}` : 'AI 闯关学习',
@@ -86,7 +83,7 @@ export default function PosterPage() {
 
   if (!quiz || !report) {
     return (
-      <View className='page' style={pageStyle}>
+      <View className='page'>
         <View className='empty'>
           <View className='empty-msg'>海报数据丢失了，请先完成一次闯关</View>
           <Button className='btn-primary' onClick={() => Taro.reLaunch({ url: '/pages/index/index' })}>
@@ -98,7 +95,7 @@ export default function PosterPage() {
   }
 
   return (
-    <View className='page' style={pageStyle}>
+    <View className='page'>
       <View className='body'>
         <View className='chapter'>CHAP. 04 · 分享</View>
         <View className='poster-stage'>

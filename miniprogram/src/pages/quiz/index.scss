@@ -10,6 +10,42 @@
   box-sizing: border-box;
 }
 
+// 自绘导航条（WHY：返回键需固定回首页，custom 模式下自绘；$paper 与页面背景融合）
+.nav-bar {
+  height: 88rpx;
+  display: flex;
+  align-items: center;
+  background: $paper;
+
+  .nav-back {
+    width: 88rpx;
+    height: 88rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    // 返回键点击区域加大，防误触；'<' 字形细，字号加粗补偿视觉重量
+    .nav-back-icon {
+      color: $lake;
+      font-size: 56rpx;
+      font-weight: 700;
+      line-height: 1;
+    }
+  }
+
+  .nav-title {
+    flex: 1;
+    text-align: center;
+    font-size: 34rpx;
+    font-weight: 600;
+    color: $ink;
+  }
+
+  // 右侧占位与返回键等宽（WHY：flex:1 居中时标题不偏移）
+  .nav-side {
+    width: 88rpx;
+  }
+}
+
 .body {
   flex: 1;
   display: flex;
