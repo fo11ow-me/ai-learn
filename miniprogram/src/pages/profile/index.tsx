@@ -1,9 +1,10 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Button, Input, Text, View } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
 import { getMe, updateMe, UserProfile } from '../../api/user'
 import { useStatusBarHeight } from '../../hooks/useStatusBarHeight'
 import { TaskError } from '../../types/report'
+import { computeLineChart } from './lineChart'
 import './index.scss'
 
 /** 星期缩写（原型图例：一 二 三 四 五 六 + 今） */
@@ -29,6 +30,13 @@ export default function Profile() {
   const statusBarHeight = useStatusBarHeight()
   const pageStyle = { paddingTop: `${statusBarHeight}px` }
 
+  // 折线图布局（WHY：坐标/线段/数字标注由纯函数统一计算，组件只消费结果）
+  // （WHY：useMemo 必须置于早期 return 之前无条件调用，否则加载态/加载完成后 hook 数量变化触发 Rules of Hooks 错误；未加载时以空数组兜底，data 到达后重算）
+  const line = useMemo(
+    () => computeLineChart((data?.daily_answers ?? []).map((d) => d.count)),
+    [data],
+  )
+
   const load = useCallback(() => {
     setLoading(true)
     getMe()
@@ -39,6 +47,9 @@ export default function Profile() {
       .catch((e) => setError((e as TaskError).message))
       .finally(() => setLoading(false))
   }, [])
+
+  // 首次挂载必加载（WHY：H5 刷新时 onShow 事件早于组件挂载，useDidShow 会丢失导致永久 loading）
+  useEffect(load, [load])
 
   // 每次进入页面刷新（WHY：闯关后金币/记录可能刚变化，返回 tab 时数据需最新）
   useDidShow(() => {
@@ -96,7 +107,6 @@ export default function Profile() {
   }
 
   const profile = data as UserProfile
-  const maxCount = Math.max(...profile.daily_answers.map((d) => d.count), 1)
   const empty = profile.stats.sessions === 0
 
   return (
@@ -139,18 +149,33 @@ export default function Profile() {
           </>
         ) : (
           <>
-            {/* 近七日答题柱状图（原型：今日晨光金高亮，其余湖水青碧渐变） */}
+            {/* 近七日答题折线图（View 拼装：线段/点/数字坐标由 lineChart.ts 纯函数计算；今日金色高亮） */}
             <View className='sec-h'>近七日答题</View>
             <View className='chart card'>
-              <View className='bars'>
-                {profile.daily_answers.map((d, i) => {
-                  const isToday = i === profile.daily_answers.length - 1
-                  const height = Math.max((d.count / maxCount) * 100, d.count > 0 ? 6 : 2)
+              <View className='line-chart'>
+                {line.segments.map((s, i) => (
+                  <View key={i} className='seg' style={{ left: `${s.x}rpx`, top: `${s.y}rpx`, width: `${s.length}rpx`, transform: `rotate(${s.angleDeg}deg)` }} />
+                ))}
+                {line.points.map((p, i) => {
+                  const isToday = i === line.points.length - 1
+                  return <View key={i} className={`pt${isToday ? ' today' : ''}`} style={{ left: `${p.x}rpx`, top: `${p.y}rpx` }} />
+                })}
+                {line.points.map((p, i) => {
+                  const isToday = i === line.points.length - 1
                   return (
-                    <View key={d.date} className='bar-col'>
-                      <View className={`bar ${isToday ? 'today' : ''}`} style={{ height: `${height}%` }} />
-                      <View className='d'>{isToday ? '今' : WEEK_DAYS[new Date(d.date).getDay()]}</View>
+                    <View key={i} className={`digit${isToday ? ' today' : ''}`} style={{ left: `${p.x}rpx`, bottom: `${p.digitBottom}rpx` }}>
+                      {p.value}
                     </View>
+                  )
+                })}
+              </View>
+              <View className='days'>
+                {line.points.map((p, i) => {
+                  const isToday = i === line.points.length - 1
+                  return (
+                    <Text key={i} className={`day${isToday ? ' today' : ''}`} style={{ left: `${p.x}rpx` }}>
+                      {isToday ? '今' : WEEK_DAYS[new Date(profile.daily_answers[i].date).getDay()]}
+                    </Text>
                   )
                 })}
               </View>

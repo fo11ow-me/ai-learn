@@ -122,42 +122,72 @@
   }
 }
 
-// 近七日柱状图
+// 近七日答题折线图（View 拼装：点/线段/数字均绝对定位，坐标由 lineChart.ts 纯函数计算）
 .chart {
   padding: 24rpx 24rpx 12rpx;
 }
 
-.bars {
-  display: flex;
-  align-items: flex-end;
-  gap: 16rpx;
+.line-chart {
+  position: relative;
   height: 168rpx;
-  padding: 0 8rpx;
+  margin: 0 8rpx;
 }
 
-.bar-col {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10rpx;
-  height: 100%;
-  justify-content: flex-end;
+.seg {
+  position: absolute;
+  height: 4rpx;
+  background: $lake;
+  border-radius: 2rpx;
+  transform-origin: 0 0; // 以起点为旋转轴心（WHY：线段从起点延伸到终点）
 }
 
-.bar {
-  width: 100%;
-  border-radius: 8rpx 8rpx 4rpx 4rpx;
-  background: linear-gradient(180deg, $mist, $lake);
-
-  &.today {
-    background: linear-gradient(180deg, $dawn, #B08330);
-  }
+// 数据点（WHY：类名用 pt 而非 dot——图例 .legend .dot 已占用该名称）
+.pt {
+  position: absolute;
+  width: 14rpx;
+  height: 14rpx;
+  border-radius: 50%;
+  background: $lake;
+  transform: translate(-50%, -50%);
 }
 
-.bar-col .d {
+.pt.today {
+  width: 18rpx;
+  height: 18rpx;
+  background: #B08330;
+}
+
+.digit {
+  position: absolute;
+  font-size: 20rpx;
+  font-weight: 600;
+  color: $ink;
+  line-height: 28rpx; // 与 TOP=48 预留的数字行高一致（WHY：峰值数字贴框时完整显示）
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.digit.today {
+  color: #B08330;
+}
+
+// 星期标签行（与数据点 x 坐标同源对齐）
+.days {
+  position: relative;
+  height: 24rpx;
+  margin: 8rpx 8rpx 0;
+}
+
+.day {
+  position: absolute;
   font-size: 18rpx;
   color: $fog;
+  transform: translateX(-50%);
+}
+
+.day.today {
+  color: #B08330;
+  font-weight: 600;
 }
 
 .legend {
