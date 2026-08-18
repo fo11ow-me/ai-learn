@@ -1,5 +1,8 @@
 """报告任务服务测试（方案文档 4.3/4.4：正确率确定性计算、多选全对判分、失败与敏感路径）"""
+import logging
+
 from app.core.tasks import TaskStore
+from app.core.tracing import current_task_id
 from app.models.schemas import AIReportSchema, AnswerRecord, QuizSchema
 from app.services.llm import LLMError
 from app.services.report import run_report_task
@@ -44,6 +47,53 @@ async def test_completed_with_report(settings, sensitive, make_valid_quiz):
     assert report["total_questions"] == 5
     assert report["summary"] == ai.summary
     assert report["quote"] == ai.quote
+
+
+async def test_trace_logs_completed(settings, sensitive, make_valid_quiz, caplog):
+    """链路日志：报告任务 start → done（task_id 贯穿，与出题链路同格式）"""
+    store = TaskStore()
+    task_id = store.create()
+    ai = AIReportSchema.model_validate(make_valid_ai_report())
+
+    with caplog.at_level(logging.INFO, logger="app.services.report"):
+        await run_report_task(
+            task_id, make_quiz(make_valid_quiz), make_answers(), FakeLLM(ai), sensitive, settings, store=store
+        )
+
+    messages = [r.message for r in caplog.records]
+    assert any(f"report task start task_id={task_id}" in m for m in messages)
+    assert any(f"report task done task_id={task_id}" in m and "status=completed" in m for m in messages)
+
+
+async def test_task_id_ctx_restored_after_run(settings, sensitive, make_valid_quiz, caplog):
+    """报告任务执行期间 ctx 注入 task_id，任务结束后恢复（WHY：任务池复用协程，残留旧值会污染下一任务日志）"""
+    store = TaskStore()
+    task_id = store.create()
+    ai = AIReportSchema.model_validate(make_valid_ai_report())
+
+    await run_report_task(
+        task_id, make_quiz(make_valid_quiz), make_answers(), FakeLLM(ai), sensitive, settings, store=store
+    )
+
+    assert current_task_id.get() is None
+
+
+async def test_task_id_ctx_restored_on_llm_error(settings, sensitive, make_valid_quiz):
+    """失败路径同样释放 ctx（finally 生效）"""
+    store = TaskStore()
+    task_id = store.create()
+
+    await run_report_task(
+        task_id,
+        make_quiz(make_valid_quiz),
+        make_answers(),
+        FakeLLM(error=LLMError("LLM_TIMEOUT", "超时")),
+        sensitive,
+        settings,
+        store=store,
+    )
+
+    assert current_task_id.get() is None
 
 
 async def test_correct_rate_computed_not_from_ai(settings, sensitive, make_valid_quiz):

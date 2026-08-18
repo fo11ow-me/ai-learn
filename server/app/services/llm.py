@@ -1,5 +1,6 @@
 """LLM 客户端封装（WHY：供应商可替换、结构化输出、超时重试集中于此，业务代码不感知模型细节）"""
 import logging
+import time
 from asyncio import sleep
 from pathlib import Path
 from typing import Any, Callable
@@ -10,10 +11,12 @@ from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel, ValidationError
 
 from app.core.config import Settings
-from app.models.schemas import AIReportSchema, AnswerRecord, QuizSchema
+from app.core.tracing import task_id_kv, truncate_for_log
+from app.models.schemas import AIReportSchema, AnswerRecord, QuizSchema, SearchPlanSchema
 
 QUIZ_TEMPERATURE = 0.7  # 出题温度（方案文档 5.1）
 REPORT_TEMPERATURE = 0.5  # 报告温度（方案文档 5.1）
+SEARCH_PLAN_TEMPERATURE = 0.3  # 检索计划温度（WHY：计划要稳定，不要多样性）
 MAX_ATTEMPTS = 3  # 1 次原始调用 + 2 次重试（方案文档 4.4）
 BACKOFF_BASE_SECONDS = 2.0  # 指数退避基数：2s / 4s
 
@@ -39,10 +42,18 @@ class LLMClient:
         self._settings = settings
         self._build_model = build_model or (lambda temperature: _default_build_model(settings, temperature))
 
-    async def generate_quiz(self, content: str) -> QuizSchema:
-        """基于用户输入生成题库（结构化输出，Pydantic 校验失败会重试）"""
-        prompt = ChatPromptTemplate.from_template(_load_prompt("quiz.txt")).format(content=content)
+    async def generate_quiz(self, content: str, search_results: str | None = None) -> QuizSchema:
+        """基于用户输入（+可选检索资料）生成题库（WHY：search_results 存在时注入【参考资料】段落约束事实来源；
+        None 时模板不渲染该段落，Prompt 与接入搜索前逐字一致）"""
+        prompt = ChatPromptTemplate.from_template(_load_prompt("quiz.txt"), template_format="jinja2").format(
+            content=content, search_results=search_results or ""
+        )
         return await self._invoke_structured(QuizSchema, prompt, QUIZ_TEMPERATURE)
+
+    async def plan_search(self, content: str) -> SearchPlanSchema:
+        """制定联网检索计划（WHY：LLM 只决策 mode/关键词/条数/深度，执行由流水线确定性代码完成）"""
+        prompt = ChatPromptTemplate.from_template(_load_prompt("search_plan.txt")).format(content=content)
+        return await self._invoke_structured(SearchPlanSchema, prompt, SEARCH_PLAN_TEMPERATURE)
 
     async def generate_report(self, quiz: QuizSchema, answers: list[AnswerRecord]) -> AIReportSchema:
         """基于题目与作答生成报告（正确率等统计字段由服务层代码计算，不在本方法范围）"""
@@ -53,16 +64,37 @@ class LLMClient:
         return await self._invoke_structured(AIReportSchema, prompt, REPORT_TEMPERATURE)
 
     async def _invoke_structured(self, schema_cls: type[BaseModel], prompt: str, temperature: float) -> BaseModel:
-        """结构化生成 + 重试：attempt 1..3，失败退避 2s/4s，最终失败按错误码归类"""
-        # method="function_calling"（WHY：DeepSeek 不支持 json_schema 响应格式，function calling 官方支持且自动解析校验）
-        model = self._build_model(temperature).with_structured_output(schema_cls, method="function_calling")
+        """结构化生成 + 重试：attempt 1..3，失败退避 2s/4s，最终失败按错误码归类。
+        追踪日志（WHY：INFO 记录第几次成功/耗时/token 用量；DEBUG 记录完整 Prompt 与输出，
+        不改代码即可重建调用现场——注意 DEBUG 含用户输入原文，生产保持 INFO）"""
+        # include_raw=True（WHY：DeepSeek 不支持 json_schema 响应格式，function calling 官方支持且自动解析校验；
+        # include_raw 额外返回原始 AIMessage，用于提取 usage_metadata 的 token 用量）
+        model = self._build_model(temperature).with_structured_output(schema_cls, method="function_calling", include_raw=True)
+        t0 = time.monotonic()
         last_exc: Exception | None = None
         for attempt in range(1, MAX_ATTEMPTS + 1):
             try:
-                return await model.ainvoke(prompt)
+                result = await model.ainvoke(prompt)
+                parsed = result.get("parsed")
+                if parsed is None:
+                    # include_raw 模式解析失败不抛异常（parsed=None），须显式抛出让重试与错误分类生效
+                    raise OutputParserException("结构化解析失败（include_raw 模式下 parsed 为空）")
+                raw = result.get("raw")
+                usage = getattr(raw, "usage_metadata", None) or {}
+                _logger.info(
+                    "%sLLM 调用成功（第 %s/%s 次，%.1fs）：%s tokens=in=%s out=%s",
+                    task_id_kv(), attempt, MAX_ATTEMPTS, time.monotonic() - t0,
+                    schema_cls.__name__, usage.get("input_tokens", "-"), usage.get("output_tokens", "-"),
+                )
+                _logger.debug("%sLLM 输入：%s", task_id_kv(), truncate_for_log(prompt))
+                _logger.debug(
+                    "%sLLM 输出（%s）：%s", task_id_kv(), schema_cls.__name__,
+                    truncate_for_log(parsed.model_dump_json(ensure_ascii=False)),
+                )
+                return parsed
             except Exception as exc:  # 网络/超时/限流/解析失败均走统一重试
                 last_exc = exc
-                _logger.warning("LLM 调用失败（第 %s/%s 次）：%s", attempt, MAX_ATTEMPTS, exc)
+                _logger.warning("%sLLM 调用失败（第 %s/%s 次）：%s", task_id_kv(), attempt, MAX_ATTEMPTS, exc, exc_info=exc)
                 if attempt < MAX_ATTEMPTS:
                     await sleep(BACKOFF_BASE_SECONDS**attempt)
         raise _classify_error(last_exc)

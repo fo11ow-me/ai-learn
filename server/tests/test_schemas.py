@@ -2,7 +2,7 @@
 import pytest
 from pydantic import ValidationError
 
-from app.models.schemas import AIReportSchema, QuizSchema, ReportRequest, ReportSchema
+from app.models.schemas import AIReportSchema, QuizSchema, ReportRequest, ReportSchema, SearchPlanSchema
 from tests.conftest import make_valid_ai_report, make_valid_answers
 
 
@@ -105,6 +105,53 @@ class TestAIReportSchema:
         data["suggestions"] = ["只有一条建议"]
         with pytest.raises(ValidationError):
             AIReportSchema.model_validate(data)
+
+
+class TestSearchPlanSchema:
+    def test_valid_search_plan_passes(self):
+        plan = SearchPlanSchema.model_validate(
+            {"mode": "search", "keywords": ["Harness Engineering", "AI 测试"], "count": 6, "depth": "advanced"}
+        )
+        assert plan.count == 6
+        assert plan.depth == "advanced"
+
+    def test_valid_extract_plan_passes(self):
+        plan = SearchPlanSchema.model_validate({"mode": "extract", "url": "https://docs.tavily.com"})
+        assert plan.url == "https://docs.tavily.com"
+        assert plan.count == 5  # 默认值
+        assert plan.depth == "basic"
+
+    def test_rejects_search_without_keywords(self):
+        with pytest.raises(ValidationError):
+            SearchPlanSchema.model_validate({"mode": "search", "keywords": []})
+
+    def test_rejects_search_with_four_keywords(self):
+        with pytest.raises(ValidationError):
+            SearchPlanSchema.model_validate({"mode": "search", "keywords": ["a", "b", "c", "d"]})
+
+    def test_rejects_keyword_too_long(self):
+        with pytest.raises(ValidationError):
+            SearchPlanSchema.model_validate({"mode": "search", "keywords": ["超" * 31]})
+
+    def test_rejects_extract_without_url(self):
+        with pytest.raises(ValidationError):
+            SearchPlanSchema.model_validate({"mode": "extract", "url": ""})
+
+    def test_rejects_search_with_url(self):
+        with pytest.raises(ValidationError):
+            SearchPlanSchema.model_validate(
+                {"mode": "search", "keywords": ["词"], "url": "https://example.com"}
+            )
+
+    def test_rejects_extract_with_keywords(self):
+        with pytest.raises(ValidationError):
+            SearchPlanSchema.model_validate(
+                {"mode": "extract", "url": "https://example.com", "keywords": ["词"]}
+            )
+
+    def test_rejects_count_out_of_range(self):
+        with pytest.raises(ValidationError):
+            SearchPlanSchema.model_validate({"mode": "search", "keywords": ["词"], "count": 9})
 
 
 class TestReportSchema:

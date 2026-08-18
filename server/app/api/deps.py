@@ -8,6 +8,7 @@ from app.core.db import db_engine
 from app.core.sensitive import load_filter
 from app.core.tasks import task_store
 from app.services.llm import LLMClient
+from app.services.search import SearchClient
 
 
 def deps(app: FastAPI):
@@ -23,6 +24,8 @@ def deps(app: FastAPI):
         app.state.store = task_store
     if not hasattr(app.state, "db"):
         app.state.db = db_engine
+    if not hasattr(app.state, "search"):
+        app.state.search = SearchClient(app.state.settings)
     return app.state.llm, app.state.sensitive, app.state.store, app.state.settings
 
 

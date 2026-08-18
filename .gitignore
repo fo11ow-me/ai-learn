@@ -2,5 +2,17 @@
 .playwright-mcp
 .env
 
+# AI 禁读目录（与业务开发无关，不入仓库）
+ai-blocked/
+
 # 微信开发者工具个人私有配置（编辑器布局等，机器相关不入库）
 project.private.config.json
+
+# OpenSpec AI 开发工具（与具体环境绑定，不入仓库）
+openspec/
+
+# Git Bash 崩溃转储
+bash.exe.stackdump
+
+# Claude Code AI 工具配置（与业务开发无关）
+.claudeignore

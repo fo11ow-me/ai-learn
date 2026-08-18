@@ -15,7 +15,13 @@ _logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     deps(app)  # 惰性装配（含 app.state.db）
+    # 接入日志级别（WHY：uvicorn 不配置 root logger——无 handler 时 INFO 级应用日志被静默丢弃，
+    # 「控制台信息少」的根因；LOG_LEVEL 生效是本次追踪方案的前提）
+    log_level = getattr(logging, app.state.settings.log_level.upper(), logging.INFO)
+    logging.basicConfig(level=log_level, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     validate_settings(app.state.settings)  # 正式模式漏配 JWT_SECRET → 启动即失败（fail fast，防空密钥伪造 token）
+    # 启动摘要（脱敏，WHY：启动即核对环境配置是否如预期——哪些功能启用、密钥已配置但绝不外泄明文）
+    _logger.info("启动配置：%s", app.state.settings.redacted_summary())
     try:
         await app.state.db.create_all()
     except Exception as exc:  # MySQL 未启动时记录日志继续启动（WHY：不影响 /health 探活，DB 接口调用时再报错）

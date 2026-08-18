@@ -1,11 +1,16 @@
 """报告任务流水线（方案文档 3.3/4.3）：代码计算正确率 → AI 生成复盘文本 → 组装完整报告契约"""
 import asyncio
+import logging
+import time
 
 from app.core.config import Settings
 from app.core.sensitive import SensitiveFilter
 from app.core.tasks import TaskError, TaskStore, task_store
+from app.core.tracing import current_task_id
 from app.models.schemas import AIReportSchema, AnswerRecord, QuizSchema, ReportSchema
 from app.services.llm import LLMClient, LLMError
+
+_logger = logging.getLogger(__name__)
 
 
 async def run_report_task(
@@ -21,7 +26,11 @@ async def run_report_task(
 ) -> None:
     """后台执行报告任务：置 running → 生成（带整体超时）→ 合规检查 → 组装报告 → completed；
     任何失败写 failed + 错误码。store 默认模块级单例，测试可注入独立实例"""
+    # current_task_id 注入 ContextVar（WHY：LLM 等深层追踪日志经 task_id_kv() 自动携带 task_id）
+    token = current_task_id.set(task_id)
+    t0 = time.monotonic()
     store.update(task_id, status="running")
+    _logger.info("report task start task_id=%s questions=%d", task_id, len(quiz.questions))
     try:
         correct_count = count_correct(quiz, answers)
         async with asyncio.timeout(settings.task_timeout_seconds):
@@ -32,6 +41,7 @@ async def run_report_task(
                     status="failed",
                     error=TaskError(code="SENSITIVE_CONTENT", message="生成内容包含敏感信息，请重试"),
                 )
+                _logger.warning("report task done task_id=%s status=failed code=SENSITIVE_CONTENT elapsed=%.1fs", task_id, time.monotonic() - t0)
                 return
         report = ReportSchema(
             correct_rate=round(correct_count / len(quiz.questions) * 100),
@@ -43,6 +53,7 @@ async def run_report_task(
             quote=ai.quote,
         )
         store.update(task_id, status="completed", payload={"report": report.model_dump()})
+        _logger.info("report task done task_id=%s status=completed elapsed=%.1fs", task_id, time.monotonic() - t0)
         if session_id is not None and db_engine is not None:
             # 回写闯关记录（WHY：历史报告页直接读库，不再调 AI；回写失败仅记日志不置任务失败）
             try:
@@ -57,18 +68,23 @@ async def run_report_task(
                         .values(report_json=report.model_dump()))
                     await db.commit()
             except Exception as exc:  # 回写失败不影响已完成任务
-                import logging
-                logging.getLogger(__name__).warning("报告回写失败 session_id=%s: %s", session_id, exc)
+                _logger.warning("report backfill fail task_id=%s session_id=%s: %s", task_id, session_id, exc)
     except TimeoutError:
         store.update(
             task_id, status="failed", error=TaskError(code="TASK_TIMEOUT", message="生成超时，请重试")
         )
+        _logger.warning("report task done task_id=%s status=failed code=TASK_TIMEOUT elapsed=%.1fs", task_id, time.monotonic() - t0)
     except LLMError as exc:
         store.update(task_id, status="failed", error=TaskError(code=exc.code, message=exc.message))
+        _logger.warning("report task done task_id=%s status=failed code=%s elapsed=%.1fs", task_id, exc.code, time.monotonic() - t0)
     except Exception:
         store.update(
             task_id, status="failed", error=TaskError(code="LLM_UNAVAILABLE", message="生成失败，请重试")
         )
+        _logger.warning("report task done task_id=%s status=failed code=LLM_UNAVAILABLE elapsed=%.1fs", task_id, time.monotonic() - t0)
+    finally:
+        # 释放 ContextVar（WHY：任务池复用协程，残留 task_id 会让下一任务的日志串上旧值）
+        current_task_id.reset(token)
 
 
 def count_correct(quiz: QuizSchema, answers: list[AnswerRecord]) -> int:

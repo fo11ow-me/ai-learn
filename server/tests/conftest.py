@@ -17,6 +17,31 @@ def sensitive():
     return SensitiveFilter(["赌博"])
 
 
+class FakeSearchClient:
+    """默认返回空资料（= 降级）的搜索客户端（WHY：API 级测试不依赖真实 TAVILY_API_KEY 与网络；
+    用例可按需注入 search_result/extract_result 或抛错，并断言调用记录）"""
+
+    def __init__(self, search_result="", extract_result="", search_error=None, extract_error=None):
+        self.search_result = search_result
+        self.extract_result = extract_result
+        self.search_error = search_error
+        self.extract_error = extract_error
+        self.search_calls: list[tuple] = []
+        self.extract_calls: list[str] = []
+
+    async def search(self, query, count, depth):
+        self.search_calls.append((query, count, depth))
+        if self.search_error:
+            raise self.search_error
+        return self.search_result
+
+    async def extract(self, url):
+        self.extract_calls.append(url)
+        if self.extract_error:
+            raise self.extract_error
+        return self.extract_result
+
+
 @pytest.fixture
 def test_app():
     """创建独立应用实例并注入独立任务存储与 SQLite 内存库（用例再按需注入 fake LLM/词表）"""
@@ -30,6 +55,7 @@ def test_app():
     app.state.store = TaskStore()
     app.state.db = DBEngine()
     app.state.db.bind("sqlite+aiosqlite://", poolclass=StaticPool)
+    app.state.search = FakeSearchClient()
     return app
 
 

@@ -58,3 +58,13 @@ class TestTaskStore:
         task_id = store.create()
         assert store.cleanup() == 0  # 未超 TTL 不清理
         assert store.get(task_id) is not None
+
+    def test_count_running(self):
+        store = TaskStore()
+        assert store.count_running() == 0  # 空库为 0
+        a, b = store.create(), store.create()
+        store.update(a, status="running")
+        assert store.count_running() == 1  # 仅 running 计数
+        store.update(b, status="completed")
+        store.update(a, status="completed")
+        assert store.count_running() == 0  # 完成/失败不计入

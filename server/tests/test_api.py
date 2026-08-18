@@ -1,5 +1,6 @@
 """API 路由集成测试（方案文档 4.1：202+轮询、404、422、错误码透传）"""
 import asyncio
+import logging
 
 from app.core.sensitive import SensitiveFilter
 from app.models.schemas import AIReportSchema, QuizSchema
@@ -15,7 +16,7 @@ class FakeLLM:
         self._ai_report = ai_report
         self._error = error
 
-    async def generate_quiz(self, content):
+    async def generate_quiz(self, content, search_results=None):
         if self._error:
             raise self._error
         return self._quiz
@@ -157,3 +158,38 @@ async def test_report_invalid_answers_422(client, make_valid_quiz):
         "/report", json={"quiz": make_valid_quiz(), "answers": make_valid_answers()[:4]}
     )
     assert resp.status_code == 422  # 缺一条作答，契约校验拒绝
+
+
+async def test_quiz_submit_logs_running_count(client, test_app, make_valid_quiz, caplog):
+    """提交日志含 running 计数（WHY：并发排查——队列积压一眼可见）"""
+    quiz = QuizSchema.model_validate(make_valid_quiz())
+    test_app.state.llm = FakeLLM(quiz=quiz)
+    test_app.state.sensitive = SensitiveFilter(["赌博"])
+
+    with caplog.at_level(logging.INFO, logger="app.api.routes.quiz"):
+        resp = await client.post("/quiz", json={"content": "内容"})
+
+    assert resp.status_code == 202
+    task_id = resp.json()["task_id"]
+    assert any(
+        f"quiz submit task_id={task_id}" in r.message and "running=" in r.message for r in caplog.records
+    )
+
+
+async def test_report_submit_logs_running_count(client, test_app, make_valid_quiz, caplog):
+    """报告提交日志含 running 计数"""
+    quiz = QuizSchema.model_validate(make_valid_quiz())
+    ai = AIReportSchema.model_validate(make_valid_ai_report())
+    test_app.state.llm = FakeLLM(quiz=quiz, ai_report=ai)
+    test_app.state.sensitive = SensitiveFilter(["赌博"])
+
+    with caplog.at_level(logging.INFO, logger="app.api.routes.report"):
+        resp = await client.post(
+            "/report", json={"quiz": quiz.model_dump(), "answers": make_valid_answers()}
+        )
+
+    assert resp.status_code == 202
+    task_id = resp.json()["task_id"]
+    assert any(
+        f"report submit task_id={task_id}" in r.message and "running=" in r.message for r in caplog.records
+    )

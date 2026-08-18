@@ -1,6 +1,6 @@
 """应用配置（WHY：API Key 等敏感信息集中从环境变量读取，密钥不散落代码、不入仓库）"""
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 
 from dotenv import load_dotenv
 
@@ -31,6 +31,10 @@ class Settings:
     wechat_secret: str = ""
     auth_mock: bool = True  # 开发期跳过 code2session（WHY：无正式 AppID 也能跑通全流程）
     auth_mock_openid: str = "mock-user"
+    search_enabled: bool = True  # 联网搜索总开关；关闭后出题行为与接入前完全一致
+    tavily_api_key: str = ""  # Tavily 搜索密钥；空则视同未启用（自动降级为一段式出题）
+    search_result_max_chars: int = 4000  # 检索资料拼接上限（防止顶穿 LLM 上下文）
+    log_level: str = "INFO"  # 日志级别：INFO=事件摘要；DEBUG 输出模型调用输入输出等完整内容（含用户输入，生产慎用）
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -74,7 +78,23 @@ class Settings:
             wechat_secret=os.environ.get("WECHAT_SECRET", ""),
             auth_mock=os.environ.get("AUTH_MOCK", "true").lower() != "false",
             auth_mock_openid=os.environ.get("AUTH_MOCK_OPENID", "mock-user"),
+            search_enabled=os.environ.get("SEARCH_ENABLED", "true").lower() != "false",
+            tavily_api_key=os.environ.get("TAVILY_API_KEY", ""),
+            search_result_max_chars=_int("SEARCH_RESULT_MAX_CHARS", 4000),
+            log_level=os.environ.get("LOG_LEVEL", "INFO"),
         )
+
+    def redacted_summary(self) -> str:
+        """启动配置摘要（脱敏）：精确字段名集合判定（WHY：子串匹配会误伤 jwt_expire_days 等
+        含 hint 的普通字段）；长度 ≤8 整体打码（前缀超过密钥长度等于完整泄露），其余字段原样"""
+        _SECRET_FIELDS = {"deepseek_api_key", "mysql_password", "jwt_secret", "wechat_secret", "tavily_api_key"}
+        parts = []
+        for field in fields(self):
+            value = getattr(self, field.name)
+            if field.name in _SECRET_FIELDS and value:
+                value = f"{str(value)[:8]}***" if len(str(value)) > 8 else "***"
+            parts.append(f"{field.name}={value}")
+        return " ".join(parts)
 
 
 def get_settings() -> Settings:

@@ -46,6 +46,10 @@ class TaskStore:
         """查询任务快照；不存在返回 None（路由层映射为 404）"""
         return self._tasks.get(task_id)
 
+    def count_running(self) -> int:
+        """统计 running 状态任务数（WHY：路由提交处打印并发快照，观察任务队列健康）"""
+        return sum(1 for task in self._tasks.values() if task.status == "running")
+
     def update(self, task_id: str, *, status: TaskStatus | None = None,
                payload: dict | None = None, error: TaskError | None = None) -> None:
         """更新任务状态（部分更新：只更新传入的非 None 字段；任务不存在时为 no-op）"""

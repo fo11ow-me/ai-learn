@@ -112,6 +112,33 @@ class AIReportSchema(BaseModel):
     quote: str = Field(min_length=1, max_length=30, description="学习金句，用于海报")
 
 
+class SearchPlanSchema(BaseModel):
+    """联网检索计划（D3：LLM 单次结构化输出，代码按计划执行——决策与执行分离）。
+    mode=search 时必须有 1~3 个关键词；mode=extract 时必须有 url，互斥校验"""
+
+    mode: Literal["search", "extract"]
+    keywords: list[str] = Field(default=[], description="搜索关键词（mode=search 时 1~3 个，每词 ≤30 字）")
+    url: str = Field(default="", description="目标网页地址（mode=extract 时必填）")
+    count: int = Field(default=5, ge=3, le=8, description="搜索返回条数")
+    depth: Literal["basic", "advanced"] = "basic"
+
+    @model_validator(mode="after")
+    def _check_consistency(self) -> "SearchPlanSchema":
+        if self.mode == "search":
+            if not (1 <= len(self.keywords) <= 3):
+                raise ValueError("search 模式必须有 1~3 个关键词")
+            if any(len(kw) > 30 for kw in self.keywords):
+                raise ValueError("关键词不能超过 30 字")
+            if self.url:
+                raise ValueError("search 模式不应提供 url")
+        else:
+            if not self.url:
+                raise ValueError("extract 模式必须提供 url")
+            if self.keywords:
+                raise ValueError("extract 模式不应提供关键词")
+        return self
+
+
 class ReportSchema(BaseModel):
     """报告契约（方案文档 4.3）= 代码计算的正确率统计 + AI 生成的文本部分（服务层组装）"""
 
