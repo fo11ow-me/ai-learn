@@ -157,6 +157,11 @@
   .chart .legend { display: flex; justify-content: center; gap: 14px; font-size: 9.5px; color: var(--fog); padding: 8px 0 4px; }
   .chart .legend i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
 
+  /* 近七日答题 · 折线图（柱状图已改为折线图，今日金色高亮，坐标由 computeLineChart 纯函数计算） */
+  .chart .line-chart { display: block; width: 100%; height: 84px; }
+  .chart .d-labels { display: flex; justify-content: space-between; font-size: 9px; color: var(--fog); padding: 6px 2px 4px; }
+  .chart .d-labels .today { color: var(--dawn); font-weight: 600; }
+
   .tree { padding: 12px 14px; display: flex; align-items: center; gap: 10px; }
   .tree .branches { flex-shrink: 0; }
   .tree .leaves { flex: 1; display: flex; flex-wrap: wrap; gap: 6px; }
@@ -208,6 +213,21 @@
   .source-card.dawn .ico { background: var(--dawn); box-shadow: 0 2px 0 #B08330; }
   .source-card .t { font-size: 13.5px; font-weight: 600; }
   .source-card .s { font-size: 10.5px; color: var(--fog); margin-top: 3px; }
+  .source-card .src-status { margin-left: auto; font-size: 9.5px; white-space: nowrap; border-radius: 999px; padding: 2px 8px; flex-shrink: 0; }
+  .source-card .src-status.done { color: var(--moss); border: 1px solid rgba(78,125,94,.4); background: rgba(78,125,94,.08); }
+  .source-card .src-status.plan { color: var(--fog); border: 1px dashed rgba(139,111,71,.35); }
+
+  /* 文本 + URL 混合输入框（与主页输入一致，自动识别链接） */
+  .input-wrap { margin: 16px 0 14px; }
+  .input-wrap textarea {
+    width: 100%; height: 84px; resize: none;
+    border: 1px solid rgba(139,111,71,.3); border-radius: 14px;
+    background: var(--page); color: var(--ink);
+    font-family: var(--sans); font-size: 12.5px; line-height: 1.7;
+    padding: 12px 14px; outline: none;
+  }
+  .input-wrap textarea:focus { border-color: rgba(58,107,92,.55); }
+  .input-meta { display: flex; justify-content: space-between; font-size: 10px; color: var(--fog); margin-top: 6px; letter-spacing: .04em; }
 
   .recent { padding: 12px 15px; font-size: 12px; }
   .recent .row { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed rgba(139,111,71,.2); }
@@ -267,7 +287,7 @@
           <div class="avatar">林</div>
           <div>
             <div class="name">林中客</div>
-            <div class="sub">已漫步 23 次 · 累计答对 96 题 · 金币 865</div>
+            <div class="sub">已漫步 23 次 · 累计答对 96 题 · 金币 1280</div>
           </div>
         </div>
 
@@ -275,23 +295,20 @@
           <div class="stat card"><div class="v">23</div><div class="l">闯关数</div></div>
           <div class="stat card"><div class="v">78%</div><div class="l">总正确率</div></div>
           <div class="stat card"><div class="v">12</div><div class="l">掌握知识点</div></div>
-          <div class="stat card"><div class="v">865</div><div class="l">金币</div></div>
+          <div class="stat card"><div class="v">1280</div><div class="l">金币</div></div>
         </div>
 
         <div class="sec-h">近七日答题</div>
         <div class="chart card">
-          <div class="bars">
-            <div class="bar-col"><div class="bar" style="height:38%"></div><div class="d">一</div></div>
-            <div class="bar-col"><div class="bar" style="height:55%"></div><div class="d">二</div></div>
-            <div class="bar-col"><div class="bar" style="height:42%"></div><div class="d">三</div></div>
-            <div class="bar-col"><div class="bar" style="height:70%"></div><div class="d">四</div></div>
-            <div class="bar-col"><div class="bar" style="height:50%"></div><div class="d">五</div></div>
-            <div class="bar-col"><div class="bar" style="height:80%"></div><div class="d">六</div></div>
-            <div class="bar-col"><div class="bar today" style="height:62%"></div><div class="d">今</div></div>
-          </div>
-          <div class="legend">
-            <span><i style="background:linear-gradient(180deg,var(--mist),var(--lake))"></i>答题数</span>
-            <span><i style="background:linear-gradient(180deg,var(--dawn),#B08330)"></i>今日</span>
+          <svg class="line-chart" viewBox="0 0 270 84" preserveAspectRatio="none">
+            <line x1="10" y1="78" x2="260" y2="78" stroke="#8B6F47" stroke-opacity=".25" stroke-width="1"/>
+            <polyline points="10,52.9 51.7,41.7 93.3,50.3 135,31.8 176.7,45 218.3,25.2" fill="none" stroke="#A8C4B8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <polyline points="218.3,25.2 260,37.1" fill="none" stroke="#D9A441" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="260" cy="37.1" r="7" fill="#D9A441" opacity=".25"/>
+            <circle cx="260" cy="37.1" r="3.5" fill="#D9A441"/>
+          </svg>
+          <div class="d-labels">
+            <span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span class="today">今</span>
           </div>
         </div>
 
@@ -314,7 +331,7 @@
         </div>
       </div>
     </div>
-    <figcaption><span class="no">01</span><span class="name">个人中心 · 学习分析</span><span class="note">统计卡（含答题金币余额）+ 七日答题柱状图 + 知识树（气泡节点）+ 历史复盘列表，对应需求 6"后台分析"</span></figcaption>
+    <figcaption><span class="no">01</span><span class="name">个人中心 · 学习分析</span><span class="note">统计卡（含答题金币余额）+ 近七日答题折线图（坐标 rpx 纯函数计算、今日金色高亮）+ 知识树（气泡节点）+ 历史复盘列表，对应需求 6"后台分析"</span></figcaption>
   </figure>
 
   <!-- ② 错题本 · 旧识重温 -->
@@ -367,7 +384,7 @@
         <button class="btn-primary" style="margin-top:auto">开启"宝藏关卡" <span style="font-family:var(--serif)">→</span></button>
       </div>
     </div>
-    <figcaption><span class="no">02</span><span class="name">错题本 · 旧识重温</span><span class="note">艾宾浩斯遗忘曲线自动触发"旧识重温"宝藏关卡；错题卡带知识点与下次复习时间，配合订阅消息推送</span></figcaption>
+    <figcaption><span class="no">02</span><span class="name">错题本 · 旧识重温</span><span class="note">艾宾浩斯遗忘曲线自动触发"旧识重温"宝藏关卡；错题卡带知识点与下次复习时间，配合订阅消息推送（错题记录已实现，本屏遗忘曲线触发为规划中设计）</span></figcaption>
   </figure>
 
   <!-- ③ 多格式输入 -->
@@ -376,33 +393,42 @@
       <div class="statusbar"><span>5:00</span><span class="capsule"><i></i><i></i><i></i></span></div>
       <div class="body">
         <div class="chapter">P1 · 万物皆可闯关</div>
-        <h2 style="font-family:var(--serif);font-size:21px;font-weight:600;line-height:1.5;margin:18px 0 4px;letter-spacing:.04em">不止是文字——<br>文档、网页、视频，<br>皆可为题。</h2>
-        <p style="font-size:11.5px;color:var(--fog);letter-spacing:.06em;margin-bottom:18px">选择一种方式，AI 解析全文并生成题库</p>
+        <h2 style="font-family:var(--serif);font-size:21px;font-weight:600;line-height:1.5;margin:18px 0 4px;letter-spacing:.04em">不止是文字——<br>文本、网页，<br>皆可为题。</h2>
+        <p style="font-size:11.5px;color:var(--fog);letter-spacing:.06em;margin-bottom:4px">输入文本或粘贴链接，AI 自动联网检索 / 直达网页提取</p>
 
-        <div class="card source-card">
-          <div class="ico">PDF</div>
-          <div><div class="t">上传文档</div><div class="s">PDF / Word · 最大 20MB</div></div>
+        <div class="input-wrap">
+          <textarea placeholder="输入想学的知识，或粘贴网页链接（支持文本 + 链接混合输入）…"></textarea>
+          <div class="input-meta"><span>识别 URL 直达网页提取 · 无 URL 则联网搜索</span><span>0 / 2000</span></div>
         </div>
-        <div class="card source-card wood">
+
+        <div class="sec-h">更多输入方式</div>
+        <div class="card source-card">
           <div class="ico">🔗</div>
           <div><div class="t">粘贴网页链接</div><div class="s">自动抓取正文并解析</div></div>
+          <span class="src-status done">已支持</span>
+        </div>
+        <div class="card source-card wood">
+          <div class="ico">PDF</div>
+          <div><div class="t">上传文档</div><div class="s">PDF / Word · 最大 20MB</div></div>
+          <span class="src-status plan">规划中</span>
         </div>
         <div class="card source-card dawn">
           <div class="ico">▶</div>
           <div><div class="t">视频链接</div><div class="s">提取字幕与讲解生成题目</div></div>
+          <span class="src-status plan">规划中</span>
         </div>
 
         <div class="sec-h">最近解析</div>
         <div class="card recent">
-          <div class="row"><span class="f">量子力学导论.pdf</span><span class="s">昨天 <span class="ok">✓ 12 题</span></span></div>
-          <div class="row"><span class="f">zhihu.com/相对论科普</span><span class="s">前天 <span class="ok">✓ 5 题</span></span></div>
-          <div class="row"><span class="f">讲座录播 · 深度学习入门</span><span class="s">失败 · 重新解析</span></div>
+          <div class="row"><span class="f">光的波粒二象性 + 链接（混合）</span><span class="s">今天 <span class="ok">✓ 5 题</span></span></div>
+          <div class="row"><span class="f">zhihu.com/相对论科普</span><span class="s">前天 <span class="ok">✓ 直达提取</span></span></div>
+          <div class="row"><span class="f">"自由意志" 联网检索</span><span class="s">3 天前 <span class="ok">✓ 5 题</span></span></div>
         </div>
 
         <button class="btn-primary" style="margin-top:auto">开始解析并出题</button>
       </div>
     </div>
-    <figcaption><span class="no">03</span><span class="name">多格式输入</span><span class="note">P1 输入扩展：上传 PDF/Word、网页 URL、视频链接三类入口 + 最近解析记录；对应需求"多格式源信息解析"</span></figcaption>
+    <figcaption><span class="no">03</span><span class="name">多格式输入</span><span class="note">P1 输入扩展：文本 + URL 混合输入、联网搜索（Tavily）、URL 直达网页提取均已实现（混合输入时识别 URL 优先提取、无 URL 则检索）；PDF/Word 上传与视频链接规划中</span></figcaption>
   </figure>
 
   <!-- ④ 金币排行榜 -->
@@ -441,8 +467,8 @@
         </div>
         <div class="rank-item card me">
           <span class="no">12</span>
-          <div class="info"><div class="n">林中客（我）</div><div class="s">答题 8 次 · 距上一名还差 170 金币</div></div>
-          <span class="pts">1,120</span>
+          <div class="info"><div class="n">林中客（我）</div><div class="s">答题 8 次 · 距上一名还差 10 金币</div></div>
+          <span class="pts">1,280</span>
         </div>
         <div class="rank-item card">
           <span class="no">13</span>

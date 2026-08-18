@@ -138,6 +138,48 @@
   /* 水波纹装饰线（SVG 底） */
   .waves { display: block; width: 100%; height: 10px; opacity: .5; }
 
+  /* ---------- 顶部导航（登录态 + 金币，用户系统） ---------- */
+  .nav-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .nav-user { display: flex; align-items: center; gap: 8px; }
+  .nav-avatar {
+    width: 30px; height: 30px; border-radius: 50%;
+    background: var(--lake-deep); color: #F5F1E6;
+    font-size: 13px; display: flex; align-items: center; justify-content: center;
+  }
+  .nav-name { font-size: 13px; color: var(--ink); letter-spacing: .03em; }
+  .coin-pill {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 13px; color: var(--wood);
+    border: 1px solid rgba(217,164,65,.5); background: rgba(217,164,65,.08);
+    border-radius: 999px; padding: 4px 10px;
+  }
+  .coin-pill .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--dawn); box-shadow: 0 0 0 2px rgba(217,164,65,.25);
+  }
+
+  /* 答题反馈 · 金币入账提示（+10 / −5，实际以结算为准） */
+  .coin-chip {
+    align-self: center; margin: 12px 0 -4px;
+    font-size: 12px; letter-spacing: .08em;
+    padding: 4px 14px; border-radius: 999px;
+  }
+  .coin-chip.plus  { color: var(--moss);  border: 1px solid rgba(78,125,94,.4);  background: rgba(78,125,94,.08); }
+  .coin-chip.minus { color: var(--maple); border: 1px solid rgba(179,89,76,.4); background: rgba(179,89,76,.08); }
+
+  /* 报告 · 金币结算行 */
+  .coin-bill {
+    display: flex; align-items: center; gap: 8px;
+    margin-top: 12px; font-size: 12px; color: var(--fog);
+  }
+  .coin-bill .label { letter-spacing: .1em; }
+  .coin-bill .gain { color: var(--moss); font-weight: 600; }
+  .coin-bill .sep { opacity: .5; }
+  .coin-bill .bal { color: var(--wood); }
+
   /* 卡片 */
   .card {
     background: var(--page);
@@ -394,6 +436,13 @@
     <div class="phone">
       <div class="statusbar"><span>4:58</span><span class="capsule"><i></i><i></i><i></i></span></div>
       <div class="body">
+        <div class="nav-bar">
+          <div class="nav-user">
+            <div class="nav-avatar">湖</div>
+            <span class="nav-name">湖畔旅人</span>
+          </div>
+          <div class="coin-pill"><span class="dot"></span>1280</div>
+        </div>
         <div class="chapter">CHAP. 01 · 湖畔</div>
         <h2 class="home-title">今日，想探索哪片<br>知识的林间小径？</h2>
         <p class="home-sub">输入一句话 / 一段文字，AI 为你铺就 5 道闯关之题</p>
@@ -416,7 +465,7 @@
         </svg>
       </div>
     </div>
-    <figcaption><span class="no">01</span><span class="name">主页 · 输入</span><span class="note">极简单输入框 + 示例主题卡片（可点击直达），"开始漫步"触发出题</span></figcaption>
+    <figcaption><span class="no">01</span><span class="name">主页 · 输入</span><span class="note">顶部导航为登录态（头像 + 昵称）+ 金币余额入口（P1 用户系统）；极简单输入框 + 示例主题卡片（可点击直达），"开始漫步"触发出题</span></figcaption>
   </figure>
 
   <!-- ② 生成中 -->
@@ -501,6 +550,8 @@
 
         <div class="verdict right"><span class="dot"></span><span class="t">答对了 · 涟漪泛起</span></div>
 
+        <div class="coin-chip plus">+10 金币</div>
+
         <div class="explain">
           <div class="h">知识讲解</div>
           <p class="p">干涉相长（明条纹）出现在两列波的光程差为波长整数倍的位置，此时振动叠加增强。若为半波长的奇数倍则相互抵消形成暗条纹——这是双缝干涉的核心判据，也是考试高频易错点。</p>
@@ -510,7 +561,7 @@
         <button class="btn-primary" style="margin-top:auto">下一题 <span style="font-family:var(--serif)">→</span></button>
       </div>
     </div>
-    <figcaption><span class="no">04</span><span class="name">答题反馈 · 答对</span><span class="note">苔绿高亮 + ✓，文案"涟漪泛起"呼应湖水意象；讲解卡纸页质感 + 知识点标签，即时巩固</span></figcaption>
+    <figcaption><span class="no">04</span><span class="name">答题反馈 · 答对</span><span class="note">苔绿高亮 + ✓ + "+10 金币"入账提示（本地即时反馈，实际以结算为准）；讲解卡纸页质感 + 知识点标签，即时巩固</span></figcaption>
   </figure>
 
   <!-- ⑤ 答错 -->
@@ -537,6 +588,8 @@
 
         <div class="verdict wrong"><span class="dot"></span><span class="t">这条小径，值得再走一遍</span></div>
 
+        <div class="coin-chip minus">−5 金币</div>
+
         <div class="explain">
           <div class="h">知识讲解</div>
           <p class="p">光电效应中，光电子能否逸出取决于入射光的频率是否高于金属的截止频率（频率足够高，再弱的光也能逸出）；光的强度只影响逸出电子的数量。爱因斯坦因光电效应方程获诺贝尔奖，这一条必须记牢。</p>
@@ -546,7 +599,7 @@
         <button class="btn-primary" style="margin-top:auto">下一题 <span style="font-family:var(--serif)">→</span></button>
       </div>
     </div>
-    <figcaption><span class="no">05</span><span class="name">答题反馈 · 答错</span><span class="note">错误选项枫红棕 ✗，正确选项苔绿揭示；文案"值得再走一遍"暗示 P1 错题重练，答错也有深度讲解</span></figcaption>
+    <figcaption><span class="no">05</span><span class="name">答题反馈 · 答错</span><span class="note">错误选项枫红棕 ✗ + "−5 金币"提示（余额封底不为负），正确选项苔绿揭示；文案"值得再走一遍"暗示 P1 错题重练，答错也有深度讲解</span></figcaption>
   </figure>
 
   <!-- ⑥ 报告 -->
@@ -565,6 +618,8 @@
             <div class="sub">答对 4 / 5 题 · 用时 3 分 12 秒</div>
           </div>
         </div>
+
+        <div class="coin-bill"><span class="label">金币结算</span><span class="gain">+25</span><span class="sep">·</span><span class="bal">余额 1280</span></div>
 
         <div class="sec-h">知识总结</div>
         <div class="summary card">光的本质之争贯穿物理学史：从牛顿的微粒说到惠更斯的波动说，再到爱因斯坦的光量子假说——光兼具波动性与粒子性（波粒二象性）。干涉、衍射体现波动性；光电效应体现粒子性。二者随观察方式互补，而非矛盾。</div>
@@ -590,7 +645,7 @@
         </div>
       </div>
     </div>
-    <figcaption><span class="no">06</span><span class="name">复盘报告</span><span class="note">正确率环形图 + 知识总结 + 逐知识点掌握度条（答错知识点显著偏低）+ 可执行建议 + 金句卡</span></figcaption>
+    <figcaption><span class="no">06</span><span class="name">复盘报告</span><span class="note">正确率环形图 + 金币结算行（服务端判分入账）+ 知识总结 + 逐知识点掌握度条（答错知识点显著偏低）+ 可执行建议 + 金句卡</span></figcaption>
   </figure>
 
   <!-- ⑦ 海报 -->
