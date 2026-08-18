@@ -4,10 +4,11 @@ services:
     container_name: ai-learn-mysql
     restart: unless-stopped
     environment:
+      # 应用以 root 连接（后端连接串用 MYSQL_USER/MYSQL_PASSWORD）；不设 MYSQL_USER，
+      # WHY：官方镜像在全新数据卷上 MYSQL_USER=root 会报 1396 CREATE USER 失败（docker-library/mysql#129）
       MYSQL_ROOT_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_HOST: "%"   # 允许 host 经端口映射以 root 连接（对应 root@'%' 账号）
       MYSQL_DATABASE: ${MYSQL_DB}
-      MYSQL_USER: ${MYSQL_USER}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     ports:
       - "${MYSQL_PORT:-3306}:3306"
     volumes:
