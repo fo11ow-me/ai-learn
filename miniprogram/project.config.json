@@ -2,7 +2,7 @@
   "miniprogramRoot": "dist/weapp/",
   "projectname": "miniprogram",
   "description": "AI 闯关学习小程序",
-  "appid": "touristappid",
+  "appid": "wxb07ef90d1cbbf6fb",
   "setting": {
     "urlCheck": false,
     "es6": false,
@@ -35,5 +35,6 @@
     "ignore": [],
     "include": []
   },
-  "editorSetting": {}
+  "editorSetting": {},
+  "libVersion": "3.17.1"
 }
