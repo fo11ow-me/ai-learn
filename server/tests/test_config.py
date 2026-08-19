@@ -52,19 +52,74 @@ def test_log_level_from_env(monkeypatch):
     assert Settings.from_env().log_level == "DEBUG"
 
 
+def test_review_settings_defaults():
+    """错题重练配置默认值：间隔序列 1/2/4/7、每日推送 9 时、模板 ID 空（降级）"""
+    settings = Settings(deepseek_api_key="test")
+    assert settings.review_interval_days == (1, 2, 4, 7)
+    assert settings.review_push_hour == 9
+    assert settings.wechat_tmpl_review == ""
+
+
+def test_review_settings_from_env(monkeypatch):
+    """环境变量注入：间隔序列解析为元组、非法值回退默认、推送时点/模板读入"""
+    monkeypatch.setenv("REVIEW_INTERVAL_DAYS", "2,3,5")
+    monkeypatch.setenv("REVIEW_PUSH_HOUR", "20")
+    monkeypatch.setenv("WECHAT_TMPL_REVIEW", "tmpl-abc")
+    settings = Settings.from_env()
+    assert settings.review_interval_days == (2, 3, 5)
+    assert settings.review_push_hour == 20
+    assert settings.wechat_tmpl_review == "tmpl-abc"
+
+    monkeypatch.setenv("REVIEW_INTERVAL_DAYS", "1,x,3")  # 含非法值 → 整体回退默认
+    assert Settings.from_env().review_interval_days == (1, 2, 4, 7)
+
+
+def test_embedding_settings_defaults():
+    """知识库 RAG 配置默认值：开关开、key 空、模型/端点/批次/分块参数"""
+    settings = Settings(deepseek_api_key="test")
+    assert settings.embedding_enabled is True
+    assert settings.embedding_api_key == ""
+    assert settings.embedding_model == "qwen3.7-text-embedding"
+    assert settings.embedding_base_url == "https://dashscope.aliyuncs.com/compatible-mode/v1"
+    assert settings.embedding_batch_size == 20
+    assert settings.kb_max_file_size_mb == 10
+    assert settings.kb_top_k == 6
+    assert settings.kb_min_score == 0.3
+    assert settings.kb_chunk_size == 500
+    assert settings.kb_chunk_overlap == 50
+
+
+def test_embedding_settings_from_env(monkeypatch):
+    """环境变量注入：开关关闭、key、专属端点、自定义参数全部读入"""
+    monkeypatch.setenv("EMBEDDING_ENABLED", "false")
+    monkeypatch.setenv("EMBEDDING_API_KEY", "sk-ws-test")
+    monkeypatch.setenv("EMBEDDING_BASE_URL", "https://ws1.cn-beijing.maas.aliyuncs.com/compatible-mode/v1")
+    monkeypatch.setenv("EMBEDDING_BATCH_SIZE", "10")
+    monkeypatch.setenv("KB_MIN_SCORE", "0.45")
+    settings = Settings.from_env()
+    assert settings.embedding_enabled is False
+    assert settings.embedding_api_key == "sk-ws-test"
+    assert settings.embedding_base_url.startswith("https://ws1.")
+    assert settings.embedding_batch_size == 10
+    assert settings.kb_min_score == 0.45
+
+
 def test_redacted_summary_hides_secrets():
     settings = Settings(
         deepseek_api_key="abcdefgh12345678",
         tavily_api_key="tvly-abcdefgh",
         jwt_secret="secret123",
         mysql_password="pw123456",
+        embedding_api_key="sk-ws-abcdefgh",
         deepseek_model="deepseek-v4-flash",
     )
     summary = settings.redacted_summary()
     assert "abcdefgh***" in summary  # 保留前缀
     assert "tvly-abc***" in summary
+    assert "sk-ws-ab***" in summary  # embedding 密钥同样脱敏（超 8 字符截前 8 + 打码）
     assert "12345678" not in summary  # 任何明文密钥片段不出现
     assert "secret123" not in summary
     assert "pw123456" not in summary
+    assert "sk-ws-abcdefgh" not in summary
     assert "deepseek_model=deepseek-v4-flash" in summary  # 非敏感字段原样
     assert "jwt_expire_days=7" in summary  # 含 jwt 子串的普通字段不误伤
