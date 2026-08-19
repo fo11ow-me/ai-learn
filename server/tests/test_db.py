@@ -1,11 +1,13 @@
 """数据库接入测试（WHY：验证 ORM 模型可建表可读写；SQLite 内存库，不依赖真实 MySQL）"""
+from datetime import datetime, timedelta
+
 import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.pool import StaticPool
 
 from app.core.db import DBEngine
-from app.models.db_models import CoinTransaction, QuizSession, User
+from app.models.db_models import CoinTransaction, QuizSession, ReviewItem, SubscribeQuota, User
 
 
 @pytest.fixture
@@ -67,3 +69,34 @@ async def test_create_coin_transaction(db):
     await db.commit()
     got = await db.scalar(select(CoinTransaction))
     assert got is not None and got.delta == 10 and got.reason == "quiz_correct"
+
+
+async def test_create_review_item(db):
+    user = User(openid="u1")
+    db.add(user)
+    await db.flush()
+    db.add(ReviewItem(
+        user_id=user.id, session_id=1,
+        question_json={"id": 1, "type": "single", "question": "q", "options": ["a", "b"],
+                       "answer": [0], "explanation": "e", "knowledge_point": "知识"},
+        question_type="single", knowledge_point="知识",
+        missed_count=1, correct_streak=0, status="pending",
+        next_review_at=datetime.now() + timedelta(days=1)))
+    await db.commit()
+    got = await db.scalar(select(ReviewItem).where(ReviewItem.user_id == user.id))
+    assert got is not None
+    assert got.missed_count == 1 and got.correct_streak == 0 and got.status == "pending"
+    assert got.question_json["answer"] == [0]  # 快照 JSON 可读
+    assert got.mastered_at is None
+
+
+async def test_create_subscribe_quota(db):
+    user = User(openid="u1")
+    db.add(user)
+    await db.flush()
+    db.add(SubscribeQuota(user_id=user.id, template_id="tmpl-1"))
+    await db.commit()
+    got = await db.scalar(select(SubscribeQuota))
+    assert got is not None
+    assert got.template_id == "tmpl-1"
+    assert got.remain == 1  # 默认剩余配额 1（授权一次可推一条）
