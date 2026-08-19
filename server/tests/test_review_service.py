@@ -9,6 +9,14 @@ from sqlalchemy.pool import StaticPool
 from app.core.db import DBEngine
 from app.models.db_models import ReviewItem, User
 from app.services.coins import SessionAlreadyExists, settle_session
+from app.services.review import (
+    MASTERED_STREAK,
+    REVIEW_INTERVAL_DAYS,
+    STATUS_MASTERED,
+    STATUS_PENDING,
+    is_due,
+    next_plan,
+)
 
 QUIZ = {
     "topic": "光的波粒二象性",
@@ -119,3 +127,73 @@ async def test_settle_idempotent_does_not_duplicate(db):
         await settle_session(db, user=user, session_key="dup", content="内容",
                              quiz=QUIZ, answers=PART_WRONG)
     assert len(await _items(db, user.id)) == 2
+
+
+# ---------- 调度状态机（SM-2 简化） ----------
+
+
+def _item(streak=0, missed=1, status=STATUS_PENDING, next_review=None) -> ReviewItem:
+    return ReviewItem(
+        user_id=1, session_id=1,
+        question_json={"id": 1, "type": "single", "question": "q",
+                       "options": ["a", "b", "c", "d"], "answer": [1],
+                       "explanation": "e", "knowledge_point": "光学"},
+        question_type="single", knowledge_point="光学",
+        missed_count=missed, correct_streak=streak, status=status,
+        next_review_at=next_review or datetime.now())
+
+
+def test_next_plan_wrong_resets():
+    """答错 → streak 清零、missed+1、间隔重置为 1 天"""
+    now = datetime(2026, 8, 19, 9, 0, 0)
+    status, streak, missed, nxt = next_plan(False, _item(streak=2, missed=2), now=now)
+    assert (status, streak, missed) == (STATUS_PENDING, 0, 3)
+    assert nxt == now + timedelta(days=1)
+
+
+def test_next_plan_correct_increases_interval():
+    """答对 → 间隔依次 2/4 天，错过次数不变"""
+    now = datetime(2026, 8, 19, 9, 0, 0)
+    status, streak, missed, nxt = next_plan(True, _item(streak=0, missed=1), now=now)
+    assert (status, streak, missed) == (STATUS_PENDING, 1, 1)
+    assert nxt == now + timedelta(days=2)
+
+    status, streak, missed, nxt = next_plan(True, _item(streak=1, missed=1), now=now)
+    assert (status, streak, missed) == (STATUS_PENDING, 2, 1)
+    assert nxt == now + timedelta(days=4)
+
+
+def test_next_plan_mastered_on_third_correct():
+    """连续答对 3 次 → mastered（掌握时刻 = 当前时刻）"""
+    now = datetime(2026, 8, 19, 9, 0, 0)
+    status, streak, missed, nxt = next_plan(True, _item(streak=2), now=now)
+    assert (status, streak, missed) == (STATUS_MASTERED, MASTERED_STREAK, 1)
+    assert nxt == now  # mastered 时 next_review_at 记录掌握时刻（提交方据此写 mastered_at）
+
+
+def test_is_due_boundary():
+    """到期判定：next_review_at.date() <= 今天（今天到期算逾期，明天不算）"""
+    today = datetime(2026, 8, 19, 12, 0, 0)
+    assert is_due(_item(next_review=today - timedelta(days=1)), today=today) is True   # 昨天
+    assert is_due(_item(next_review=today.replace(hour=9)), today=today) is True        # 今天
+    assert is_due(_item(next_review=today + timedelta(days=1)), today=today) is False   # 明天
+
+
+async def test_due_items_query(db):
+    """due_items 只返回 pending 且到期的条目（mastered 逾期不返回）"""
+    user = await _user(db)
+    today = datetime.now()
+    for i, (status, when) in enumerate([
+        (STATUS_PENDING, today - timedelta(days=1)),   # 逾期 pending → 返回
+        (STATUS_PENDING, today + timedelta(days=1)),   # 未到期 pending → 不返回
+        (STATUS_MASTERED, today - timedelta(days=1)),  # 逾期 mastered → 不返回
+    ]):
+        db.add(ReviewItem(user_id=user.id, session_id=1, question_json=QUIZ["questions"][0],
+                          question_type="single", knowledge_point="光学",
+                          missed_count=1, correct_streak=0, status=status,
+                          next_review_at=when, created_at=datetime.now()))
+    await db.commit()
+    from app.services.review import due_items
+    due = await due_items(db, user.id)
+    assert len(due) == 1
+    assert due[0].status == STATUS_PENDING
