@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Button, Input, Text, View } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
+import { getReview } from '../../api/review'
 import { getMe, updateMe, UserProfile } from '../../api/user'
 import { useStatusBarHeight } from '../../hooks/useStatusBarHeight'
 import { TaskError } from '../../types/report'
@@ -27,6 +28,8 @@ export default function Profile() {
   const [editing, setEditing] = useState(false)
   const [nickname, setNickname] = useState('')
   const [saving, setSaving] = useState(false)
+  // 错题重练摘要（null=未加载成功——未登录 401 时隐藏入口不阻断页面）
+  const [review, setReview] = useState<{ due_count: number } | null>(null)
   const statusBarHeight = useStatusBarHeight()
   const pageStyle = { paddingTop: `${statusBarHeight}px` }
 
@@ -51,9 +54,19 @@ export default function Profile() {
   // 首次挂载必加载（WHY：H5 刷新时 onShow 事件早于组件挂载，useDidShow 会丢失导致永久 loading）
   useEffect(load, [load])
 
-  // 每次进入页面刷新（WHY：闯关后金币/记录可能刚变化，返回 tab 时数据需最新）
+  // 错题重练摘要（WHY：与 getMe 并行拉取；未登录 401 由 request 层重登重试，仍失败则隐藏入口不阻断页面）
+  const loadReview = useCallback(() => {
+    getReview()
+      .then((d) => setReview({ due_count: d.summary.due_count }))
+      .catch(() => setReview(null))
+  }, [])
+
+  useEffect(loadReview, [loadReview])
+
+  // 每次进入页面刷新（WHY：闯关后金币/记录可能刚变化，返回 tab 时数据需最新；错题摘要与 getMe 并行）
   useDidShow(() => {
     load()
+    loadReview()
   })
 
   const handleEdit = () => {
@@ -135,6 +148,20 @@ export default function Profile() {
           <View className='stat card'><View className='v'>{profile.stats.knowledge_points}</View><View className='l'>掌握知识点</View></View>
           <View className='stat card'><View className='v'>{profile.user.coins}</View><View className='l'>金币</View></View>
         </View>
+
+        {/* 旧识重温入口（原型 review-banner 样式：⏳ 徽标 + 待重温数 + 去重温 →；401 未登录时隐藏） */}
+        {review && (
+          <View className='review-banner' onClick={() => Taro.navigateTo({ url: '/pages/review/index' })}>
+            <View className='bell'>⏳</View>
+            <View className='banner-text'>
+              <View className='t'>
+                {review.due_count > 0 ? `${review.due_count} 道错题到了重温之日` : '无待重温错题'}
+              </View>
+              <View className='s'>旧识重温 · 艾宾浩斯遗忘曲线</View>
+            </View>
+            <Text className='go'>去重温 〉</Text>
+          </View>
+        )}
 
         {empty ? (
           <>

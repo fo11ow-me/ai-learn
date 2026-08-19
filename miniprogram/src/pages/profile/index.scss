@@ -104,6 +104,56 @@
   }
 }
 
+// 旧识重温入口（原型 review-banner：晨光金渐变 + 圆形铃铛；与错题本页同款）
+.review-banner {
+  display: flex;
+  align-items: center;
+  gap: 24rpx;
+  padding: 26rpx 30rpx;
+  margin-top: 28rpx;
+  background: linear-gradient(90deg, #F4EEE0, #FBF6EA);
+  border: 2rpx solid rgba(217, 164, 65, 0.4);
+  border-radius: 28rpx;
+
+  .bell {
+    width: 68rpx;
+    height: 68rpx;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background: $dawn;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: $font-serif;
+    font-size: 30rpx;
+  }
+
+  .banner-text {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .t {
+    font-size: 25rpx;
+    font-weight: 600;
+    color: $ink;
+  }
+
+  .s {
+    font-size: 21rpx;
+    color: $wood;
+    margin-top: 6rpx;
+  }
+
+  .go {
+    font-size: 22rpx;
+    color: $lake;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+}
+
 // 分节标题（原型 .sec-h，右侧延长线）
 .sec-h {
   display: flex;
