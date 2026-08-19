@@ -1,21 +1,18 @@
-# AI 闯关学习小程序（AI Quest Learning）
+# AI 闯关学习小程序
 
 > 输入知识 → AI 出题 → 闯关答题 → 复盘报告 → 分享海报，一整套「轻学习」闭环。
-> Feed your knowledge in — get AI-generated quizzes, coin rewards, review reports, and shareable posters.
 
-**English summary**: A WeChat Mini Program (with H5 build) for self-directed learning through AI-generated quizzes. Key differentiators: retrieval-augmented quiz generation (private knowledge base RAG + web search), a coin reward system with anti-cheat, and Ebbinghaus forgetting-curve wrong-answer review.
+中文 | [English](README.en.md)
 
 ---
 
-## 介绍 / Introduction
+## 介绍
 
 AI 闯关学习小程序是一个以「闯关」为形式的知识巩固工具：用户输入任意知识（一句话、一段文字、一篇文档），AI 生成 5 道题（2 单选 + 1 多选 + 2 判断），答对 +10 金币 / 答错 −5 金币，闯关后生成 AI 复盘报告并支持生成分享海报。
 
 出题环节为**检索增强流水线**：优先从用户私有知识库（RAG）检索资料，不足时自动联网（Tavily）补缺，任一环节失败都静默降级为纯输入出题——保证核心闯关流程永远可用。答错的题目自动收录为错题，按艾宾浩斯遗忘曲线调度重练，并通过微信订阅消息提醒。
 
-**Tech summary**: FastAPI backend (Python + MySQL + Chroma vector store), Taro 4 + React 18 + TypeScript frontend (WeChat Mini Program & H5), LLM-generated quizzes via DeepSeek function calling with automatic degradation when optional services (search / embeddings) are unavailable.
-
-## 核心亮点 / Key Features
+## 核心亮点
 
 | | 功能 | 说明 |
 |---|---|---|
@@ -27,44 +24,48 @@ AI 闯关学习小程序是一个以「闯关」为形式的知识巩固工具�
 | 📊 | **AI 复盘报告** | 正确率 / 知识总结 / 知识点掌握度 / 下一步学习建议 / 分享海报 |
 | 🖥️ | **双端运行** | 微信小程序 + H5 同一套代码；H5 游客模式可完整体验闯关闭环 |
 
-## 业务流程图 / Business Flow
+## 业务流程图
 
 ```mermaid
 flowchart LR
-    A[输入知识<br/>Input knowledge] --> B{指定知识库?<br/>Knowledge base selected?}
-    B -- 是 / Yes --> C[仅库内资料出题<br/>Strict mode: KB only, never online]
-    B -- 否 / No --> D[检索私有知识库<br/>Retrieve KB]
-    D --> E{资料足够?<br/>Sufficient?}
-    E -- 足够 / Yes --> F[仅知识库出题<br/>KB only]
-    E -- 不足 / No --> G[Tavily 联网补缺<br/>Web search]
-    C & F & G --> H[生成 5 题<br/>Generate 5 questions]
-    H --> I[答题 + 金币<br/>Answer & earn coins]
-    I --> J[AI 复盘报告<br/>Review report]
-    I --> K{答错?<br/>Wrong answers?}
-    K -- 是 / Yes --> L[收录错题<br/>Collect mistakes]
-    L --> M[到期重练（宝藏关卡）<br/>Due review]
-    M --> N{答对 3 次连续?<br/>3 correct in a row?}
-    N -- 否 / No --> L
-    N -- 是 / Yes --> O[已掌握<br/>Mastered]
+    A[输入知识] --> B{指定知识库?}
+    B -- 是 --> C[仅库内资料出题<br/>严格模式，永不联网]
+    B -- 否 --> D[检索私有知识库]
+    D --> E{资料足够?}
+    E -- 足够 --> F[仅知识库出题]
+    E -- 不足 --> G[Tavily 联网补缺]
+    C & F & G --> H[生成 5 题]
+    H --> I[答题 + 金币]
+    I --> J[AI 复盘报告]
+    I --> K{答错?}
+    K -- 是 --> L[收录错题]
+    L --> M[到期重练（宝藏关卡）]
+    M --> N{连续答对 3 次?}
+    N -- 否 --> L
+    N -- 是 --> O[已掌握]
 ```
 
-## 界面截图 / Screenshots
+## 界面截图
 
 > 微信开发者工具模拟器截图（H5 端运行形态一致）。
 
-| 首页 Home | 闯关答题 Quiz | 复盘报告 Report |
+<!-- markdownlint-disable MD033 -->
+
+| 首页 | 闯关答题 | 我的页 |
 |---|---|---|
-| ![home](assets/screenshots/home.png) | ![quiz](assets/screenshots/quiz.png) | ![report](assets/screenshots/report.png) |
+| <img src="assets/screenshots/home.png" width="200" alt="home"> | <img src="assets/screenshots/quiz.png" width="200" alt="quiz"> | <img src="assets/screenshots/profile.png" width="200" alt="profile"> |
 
-| 我的页 Profile | 错题本 Review | 知识库列表 Knowledge Base |
-|---|---|---|
-| ![profile](assets/screenshots/profile.png) | ![review](assets/screenshots/review.png) | ![knowledge-base](assets/screenshots/knowledge-base.png) |
+| 知识库列表 | 知识库详情 |
+|---|---|
+| <img src="assets/screenshots/knowledge-base.png" width="200" alt="knowledge-base"> | <img src="assets/screenshots/knowledge-base-detail.png" width="200" alt="knowledge-base-detail"> |
 
-| 知识库详情 KB Detail |
-|---|
-| ![knowledge-base-detail](assets/screenshots/knowledge-base-detail.png) |
+| 复盘报告 | 错题本 |
+|---|---|
+| <img src="assets/screenshots/report.png" width="200" alt="report"> | <img src="assets/screenshots/review.png" width="200" alt="review"> |
 
-## 技术栈 / Tech Stack
+<!-- markdownlint-enable MD033 -->
+
+## 技术栈
 
 | 层 | 技术 | 说明 |
 |---|---|---|
@@ -76,7 +77,7 @@ flowchart LR
 | 联网搜索 | Tavily（Search + Extract 双模式） | 出题前检索最新资料，失败自动降级 |
 | Embedding | 阿里云百炼 qwen（OpenAI 兼容端点） | 文档向量化与语义检索 |
 
-## 目录结构 / Project Structure
+## 目录结构
 
 ```
 ├── server/          # FastAPI 后端（app/ 源码、tests/ 单测、scripts/ 冒烟脚本、core/prompts/ Prompt 模板）
@@ -86,11 +87,11 @@ flowchart LR
 └── docker-compose.yml  # MySQL 等中间件编排
 ```
 
-## 快速启动 / Quick Start
+## 快速启动
 
 > 核心闯关闭环只需 3 步；Tavily / Embedding / 微信订阅均为可选，未配置时自动降级。
 
-### 0. 前置依赖 / Prerequisites
+### 0. 前置依赖
 
 - Docker（MySQL）、Python 3.11+、Node 18+
 - 微信开发者工具（仅小程序端需要，`project.config.json` 已配好）
@@ -102,7 +103,7 @@ flowchart LR
 docker compose up -d        # 或 bash start-docker.sh（Windows: start-docker.ps1）
 ```
 
-### 2. 启动后端 / Start the backend
+### 2. 启动后端
 
 ```bash
 cd server
@@ -113,7 +114,7 @@ set -a && source .env && set +a
 .venv/Scripts/python.exe -m uvicorn app.main:app --port 8000   # Windows
 ```
 
-### 3. 启动前端 / Start the frontend
+### 3. 启动前端
 
 ```bash
 cd miniprogram
@@ -128,7 +129,7 @@ npm run dev:weapp
 
 > 端口冲突：本机 8000 被占用/不可用时，换空闲端口启动后端，并给前端注入 `TARO_APP_API_BASE=http://127.0.0.1:<新端口>`（编译期环境变量）。
 
-## 配置说明 / Configuration
+## 配置说明
 
 后端配置统一在 `server/.env`（模板见 `server/.env.example`，敏感值一律占位符，不入仓库）：
 
@@ -144,7 +145,7 @@ npm run dev:weapp
 
 前端编译期变量：`TARO_APP_API_BASE`（后端地址覆盖）、`TARO_APP_REVIEW_TMPL_ID`（订阅模板 ID）。
 
-## 测试 / Testing
+## 测试
 
 ```bash
 cd server
@@ -155,7 +156,7 @@ cd server
 
 前端类型检查：`cd miniprogram && npm run typecheck`。
 
-## 文档索引 / Documentation
+## 文档索引
 
 | 文档 | 内容 |
 |---|---|
