@@ -57,6 +57,50 @@ async def due_items(db: AsyncSession, user_id: int) -> list[ReviewItem]:
     return [r[0] for r in rows]
 
 
+class ReviewSubmitError(Exception):
+    """重练提交校验失败（路由层转译为 HTTP 状态码；WHY：与 coins.SessionAlreadyExists 同模式）"""
+
+    def __init__(self, status_code: int, code: str, message: str):
+        super().__init__(message)
+        self.status_code = status_code
+        self.code = code
+        self.message = message
+
+
+async def submit_attempts(db: AsyncSession, user_id: int, attempts: list[dict]) -> list[dict]:
+    """重练提交（单事务）：按快照 answer 重新判分（不信任前端）→ next_plan 逐条应用状态机。
+    校验：item 不存在或非本人 → 404（不泄露存在性）；引用已掌握条目 → 422。
+    @param attempts [{item_id, selected}]（selected 为作答选项索引，与闯关 AnswerRecord 同心智）
+    @returns updated 列表 [{item_id, status, correct_streak, missed_count, next_review_at, mastered, correct}]
+    """
+    item_ids = [a["item_id"] for a in attempts]
+    rows = (await db.execute(select(ReviewItem).where(
+        ReviewItem.user_id == user_id, ReviewItem.id.in_(item_ids)))).all()
+    items = {r[0].id: r[0] for r in rows}
+    if len(items) != len(item_ids):
+        raise ReviewSubmitError(404, "NOT_FOUND", "错题不存在")
+
+    updated: list[dict] = []
+    now = datetime.now()
+    for a in attempts:
+        item = items[a["item_id"]]
+        if item.status == STATUS_MASTERED:
+            raise ReviewSubmitError(422, "INVALID_STATE", "该错题已掌握，无需重练")
+        correct = sorted(a["selected"]) == sorted(item.question_json["answer"])
+        status, streak, missed, nxt = next_plan(correct, item, now=now)
+        item.status, item.correct_streak, item.missed_count, item.next_review_at = \
+            status, streak, missed, nxt
+        if status == STATUS_MASTERED:
+            item.mastered_at = now  # mastered 时 next_review_at 即掌握时刻
+        updated.append({
+            "item_id": item.id, "status": status, "correct_streak": streak,
+            "missed_count": missed, "next_review_at": nxt.isoformat(),
+            "mastered": status == STATUS_MASTERED, "correct": correct,
+        })
+    await db.commit()
+    return updated
+
+
 async def build_review_board(db: AsyncSession, user_id: int) -> dict:
     """聚合 GET /user/review 响应（WHY：列表/统计/安排一次查询组装，接口层只透传。
     due_count = 待重温数（pending 总数，与入口卡徽标/错题本统计口径一致，见 spec 统计场景；

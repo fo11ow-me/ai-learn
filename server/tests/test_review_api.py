@@ -133,3 +133,130 @@ async def test_get_review_user_isolation(client, test_app, make_valid_quiz):
     resp = await client.get("/user/review", headers=_auth(token_a))
     assert resp.json()["items"] == []
     assert resp.json()["summary"]["due_count"] == 0
+
+
+# ---------- 重练提交（POST /user/review/submit） ----------
+
+
+async def _make_wrong_items(client, token, session_key) -> list[int]:
+    """结算一次答错 2 题的闯关，返回收录的错题 item_id（按 next_review_at 升序）"""
+    await client.post("/user/session", headers=_auth(token), json={
+        "session_key": session_key, "content": "光的波粒二象性",
+        "quiz": _quiz(), "answers": _wrong_answers()})
+    data = (await client.get("/user/review", headers=_auth(token))).json()
+    return [i["id"] for i in data["items"]]
+
+
+def _quiz():
+    """与 conftest.make_valid_quiz 同构的最小题库（fixture 无法在模块级直接调用）"""
+    return {
+        "topic": "光的波粒二象性",
+        "source_summary": "光具有波动性与粒子性。",
+        "questions": [
+            {"id": 1, "type": "single", "question": "q1", "options": ["a", "b", "c", "d"],
+             "answer": [1], "explanation": "e", "knowledge_point": "光的本性"},
+            {"id": 2, "type": "single", "question": "q2", "options": ["a", "b", "c", "d"],
+             "answer": [1], "explanation": "e", "knowledge_point": "光的本性"},
+            {"id": 3, "type": "multiple", "question": "q3", "options": ["a", "b", "c", "d"],
+             "answer": [0, 3], "explanation": "e", "knowledge_point": "光的本性"},
+            {"id": 4, "type": "judge", "question": "q4", "options": ["正确", "错误"],
+             "answer": [1], "explanation": "e", "knowledge_point": "光电效应"},
+            {"id": 5, "type": "judge", "question": "q5", "options": ["正确", "错误"],
+             "answer": [0], "explanation": "e", "knowledge_point": "光的本性"},
+        ],
+    }
+
+
+async def test_submit_review_updates_plan(client, make_valid_quiz):
+    """重练提交：服务端按快照重判 + 状态机更新（答对递增间隔、答错重置）"""
+    token, _ = await _login(client)
+    await client.post("/user/session", headers=_auth(token), json={
+        "session_key": "a1b2c3d4-301", "content": "光的波粒二象性",
+        "quiz": make_valid_quiz(), "answers": _wrong_answers()})
+    items = [i["id"] for i in (await client.get("/user/review", headers=_auth(token))).json()["items"]]
+
+    resp = await client.post("/user/review/submit", headers=_auth(token), json={
+        "attempts": [
+            {"item_id": items[0], "selected": [1]},   # 与快照 answer 一致 → 答对
+            {"item_id": items[1], "selected": [0, 0]},  # 与快照 answer [0,3] 不符 → 答错
+        ]})
+    assert resp.status_code == 200
+    updated = resp.json()["updated"]
+    assert len(updated) == 2
+    by_id = {u["item_id"]: u for u in updated}
+    first = by_id[items[0]]
+    assert first["correct"] is True and first["mastered"] is False
+    assert first["status"] == "pending" and first["correct_streak"] == 1
+    assert first["missed_count"] == 1
+    assert first["next_review_at"] > datetime.now().isoformat()  # 答对 → 间隔递增（2 天后）
+    second = by_id[items[1]]
+    assert second["correct"] is False and second["mastered"] is False
+    assert second["status"] == "pending" and second["correct_streak"] == 0
+    assert second["missed_count"] == 2  # 错过次数 +1
+    assert second["next_review_at"] > datetime.now().isoformat()  # 重置 1 天后
+
+
+async def test_submit_review_mastered_after_three_correct(client, make_valid_quiz):
+    """同一错题连续 3 次答对 → 标记已掌握并移出待重温"""
+    token, _ = await _login(client)
+    await client.post("/user/session", headers=_auth(token), json={
+        "session_key": "a1b2c3d4-302", "content": "光的波粒二象性",
+        "quiz": make_valid_quiz(), "answers": _wrong_answers()})
+    items = [i["id"] for i in (await client.get("/user/review", headers=_auth(token))).json()["items"]]
+    item_id = items[0]
+    for _ in range(3):
+        resp = await client.post("/user/review/submit", headers=_auth(token), json={
+            "attempts": [{"item_id": item_id, "selected": [1]}]})
+        assert resp.status_code == 200
+    last = resp.json()["updated"][0]
+    assert last["mastered"] is True
+    assert last["status"] == "mastered"
+    data = (await client.get("/user/review", headers=_auth(token))).json()
+    assert data["summary"]["mastered_count"] == 1
+    assert item_id not in [i["id"] for i in data["items"]]
+
+
+async def test_submit_review_not_found_404(client, make_valid_quiz):
+    """item 不存在或非本人 → 404（不泄露存在性）"""
+    token, _ = await _login(client)
+    resp = await client.post("/user/review/submit", headers=_auth(token), json={
+        "attempts": [{"item_id": 99999, "selected": [1]}]})
+    assert resp.status_code == 404
+    assert resp.json()["detail"]["code"] == "NOT_FOUND"
+
+
+async def test_submit_review_mastered_item_422(client, test_app, make_valid_quiz):
+    """attempts 引用已掌握条目 → 422（已关闭的错题不可重复提交）"""
+    token, user = await _login(client)
+    item_ids = await _make_wrong_items(client, token, "a1b2c3d4-303")
+    db_engine = test_app.state.db
+    from sqlalchemy import select
+
+    from app.models.db_models import ReviewItem
+    async with db_engine.maker() as db:
+        item = await db.get(ReviewItem, item_ids[0])
+        item.status = STATUS_MASTERED
+        item.correct_streak = 3
+        await db.commit()
+
+    resp = await client.post("/user/review/submit", headers=_auth(token), json={
+        "attempts": [{"item_id": item_ids[0], "selected": [1]}]})
+    assert resp.status_code == 422
+    assert resp.json()["detail"]["code"] == "INVALID_STATE"
+
+
+async def test_submit_review_no_coins(client, make_valid_quiz):
+    """重练不计金币：提交后余额不变、无金币流水产生"""
+    token, _ = await _login(client)
+    item_ids = await _make_wrong_items(client, token, "a1b2c3d4-304")  # 结算已 +20
+    before = (await client.get("/user/me", headers=_auth(token))).json()["user"]["coins"]
+    resp = await client.post("/user/review/submit", headers=_auth(token), json={
+        "attempts": [{"item_id": i, "selected": [1] if i == item_ids[0] else [0]} for i in item_ids]})
+    assert resp.status_code == 200
+    after = (await client.get("/user/me", headers=_auth(token))).json()["user"]["coins"]
+    assert after == before  # 重练不影响余额
+
+
+async def test_submit_review_requires_login(client):
+    resp = await client.post("/user/review/submit", json={"attempts": []})
+    assert resp.status_code == 401
