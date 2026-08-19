@@ -22,6 +22,12 @@ export default defineConfig<'webpack5'>(async (merge) => {
       "@tarojs/plugin-generator"
     ],
     defineConstants: {
+      // 编译期注入后端地址覆盖（WHY：webpack H5/weapp 无 process 全局，process.env 直读会 ReferenceError；
+      // DefinePlugin 把字面量替换为字符串后两端安全。未设置 → 空串 → config.ts 回落默认 8000）
+      'process.env.TARO_APP_API_BASE': JSON.stringify(process.env.TARO_APP_API_BASE || ''),
+      // 订阅消息模板 ID（同上：未被 DefinePlugin 替换的 process.env.X 会在小程序运行时 ReferenceError；
+      // 空串 → 错题本页不展示订阅按钮）
+      'process.env.TARO_APP_REVIEW_TMPL_ID': JSON.stringify(process.env.TARO_APP_REVIEW_TMPL_ID || ''),
     },
     copy: {
       patterns: [
