@@ -47,15 +47,23 @@ def test_app():
     """创建独立应用实例并注入独立任务存储与 SQLite 内存库（用例再按需注入 fake LLM/词表）"""
     from sqlalchemy.pool import StaticPool
 
+    from app.core.config import Settings
     from app.core.db import DBEngine
     from app.core.tasks import TaskStore
     from app.main import create_app
+    from app.services.knowledge_base import KnowledgeBaseService
 
     app = create_app()
+    app.state.settings = Settings(deepseek_api_key="test-key", embedding_api_key="test-embed-key",
+                                  jwt_secret="test-secret")
     app.state.store = TaskStore()
     app.state.db = DBEngine()
     app.state.db.bind("sqlite+aiosqlite://", poolclass=StaticPool)
     app.state.search = FakeSearchClient()
+    # 内存 Chroma + 确定性伪 embedding（WHY：上传→向量化→轮询全流程真实跑通，不依赖百炼 key 与网络）
+    app.state.knowledge_base = KnowledgeBaseService(
+        app.state.settings, build_embeddings=lambda s: FakeEmbeddings()
+    )
     return app
 
 
@@ -139,6 +147,47 @@ def make_valid_answers() -> list[dict]:
         {"question_id": 4, "selected": [1]},
         {"question_id": 5, "selected": [0]},
     ]
+
+
+class FakeEmbeddings:
+    """确定性伪 embedding（WHY：服务级测试不依赖真实百炼 key 与网络；
+    相同文本 → 相同向量（余弦≈1 命中），不同文本 → 伪随机正交（被阈值过滤））"""
+
+    def __init__(self, dim: int = 1024):
+        self.dim = dim
+        self.calls: list[str] = []
+
+    def embed_documents(self, texts):
+        self.calls.extend(texts)
+        return [self._embed(t) for t in texts]
+
+    def embed_query(self, text):
+        self.calls.append(text)
+        return self._embed(text)
+
+    def _embed(self, text: str) -> list[float]:
+        import hashlib
+
+        digest = hashlib.sha256(text.encode("utf-8")).digest()
+        vec = [float(byte) / 255.0 - 0.5 for byte in digest]
+        vec = (vec * (self.dim // 32 + 1))[: self.dim]
+        norm = sum(v * v for v in vec) ** 0.5
+        return [v / norm for v in vec]
+
+
+class FakeKnowledgeBase:
+    """可编程的知识库服务替身（出题流水线测试用）：按指定行为返回命中/抛错，记录调用"""
+
+    def __init__(self, hits=None, error=None):
+        self.hits = hits or []
+        self.error = error
+        self.search_calls: list[tuple] = []
+
+    async def search(self, user_id, query, kb_id=None, **kwargs):
+        self.search_calls.append((user_id, query, kb_id))
+        if self.error:
+            raise self.error
+        return self.hits
 
 
 def make_valid_ai_report() -> dict:

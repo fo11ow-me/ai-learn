@@ -3,36 +3,52 @@ import asyncio
 import logging
 
 from fastapi import APIRouter, HTTPException, Request
-from pydantic import BaseModel, Field
+from sqlalchemy import select
 
-from app.api.deps import deps
+from app.api.deps import deps, get_optional_user
+from app.models.db_models import KnowledgeBase
+from app.models.schemas import QuizCreateRequest
 from app.services.quiz import run_quiz_task
 
 router = APIRouter()
 _logger = logging.getLogger(__name__)
 
-MAX_CONTENT_LENGTH = 2000  # 方案文档 4.1：内容超 2000 字 422
-
-
-class QuizCreateRequest(BaseModel):
-    """出题请求：用户输入的想学内容"""
-
-    content: str = Field(min_length=1, max_length=MAX_CONTENT_LENGTH)
-
 
 @router.post("/quiz", status_code=202)
 async def create_quiz(body: QuizCreateRequest, request: Request) -> dict:
-    """创建出题任务：敏感词过滤（输入侧）后异步生成（WHY：立即返回 task_id，前端 1.5s 轮询）"""
+    """创建出题任务：敏感词过滤（输入侧）→ 知识库归属校验 → 异步生成（WHY：立即返回 task_id，前端 1.5s 轮询）。
+    knowledge_base_id 非空 = 严格模式（仅库内出题）：必须登录且库归属当前用户，否则 401/404（防枚举）"""
     llm, sensitive, store, settings = deps(request.app)
     if sensitive.contains(body.content):
         raise HTTPException(
             status_code=422, detail={"code": "SENSITIVE_CONTENT", "message": "内容包含敏感信息，请更换内容"}
         )
+    user = await get_optional_user(request)
+    if body.knowledge_base_id is not None:
+        if user is None:
+            raise HTTPException(status_code=401, detail={"code": "UNAUTHORIZED", "message": "未登录"})
+        async with request.app.state.db.maker() as db:
+            kb = await db.scalar(
+                select(KnowledgeBase).where(
+                    KnowledgeBase.id == body.knowledge_base_id, KnowledgeBase.user_id == user.id
+                )
+            )
+        if kb is None:
+            raise HTTPException(status_code=404, detail="知识库不存在")
     task_id = store.create()
     # 提交日志带 running 计数（WHY：并发排查——多任务并发时一眼看出当前队列积压了几个在跑的任务）
-    _logger.info("quiz submit task_id=%s content_len=%d running=%d", task_id, len(body.content), store.count_running())
+    _logger.info(
+        "quiz submit task_id=%s content_len=%d running=%d kb_id=%s",
+        task_id, len(body.content), store.count_running(), body.knowledge_base_id,
+    )
     asyncio.create_task(
-        run_quiz_task(task_id, body.content, llm, sensitive, settings, store=store, search=request.app.state.search)
+        run_quiz_task(
+            task_id, body.content, llm, sensitive, settings, store=store,
+            search=request.app.state.search,
+            knowledge_base=request.app.state.knowledge_base,
+            user_id=user.id if user else None,
+            knowledge_base_id=body.knowledge_base_id,
+        )
     )
     return {"task_id": task_id}
 

@@ -15,8 +15,10 @@ class FakeLLM:
         self._quiz = quiz
         self._ai_report = ai_report
         self._error = error
+        self.doc_materials_received: list[str | None] = []
 
-    async def generate_quiz(self, content, search_results=None):
+    async def generate_quiz(self, content, search_results=None, doc_materials=None):
+        self.doc_materials_received.append(doc_materials)
         if self._error:
             raise self._error
         return self._quiz
@@ -193,3 +195,79 @@ async def test_report_submit_logs_running_count(client, test_app, make_valid_qui
     assert any(
         f"report submit task_id={task_id}" in r.message and "running=" in r.message for r in caplog.records
     )
+
+
+# ── RAG：指定知识库出题（严格模式）的鉴权与归属（设计 D4/D6）──
+
+async def _login(client):
+    resp = await client.post("/auth/login", json={"code": "c"})
+    assert resp.status_code == 200
+    return resp.json()["token"], resp.json()["user"]
+
+
+def _auth(token):
+    return {"Authorization": f"Bearer {token}"}
+
+
+async def test_quiz_with_kb_id_requires_login(client, test_app, make_valid_quiz):
+    """指定知识库但未登录 → 401（WHY：知识库是私有资源，严格模式必须有真实用户归属）"""
+    test_app.state.llm = FakeLLM(quiz=QuizSchema.model_validate(make_valid_quiz()))
+    resp = await client.post("/quiz", json={"content": "内容", "knowledge_base_id": 1})
+    assert resp.status_code == 401
+
+
+async def test_quiz_with_missing_kb_404(client, test_app, make_valid_quiz):
+    """指定不存在的知识库 → 404（与越权一致，防枚举）"""
+    test_app.state.llm = FakeLLM(quiz=QuizSchema.model_validate(make_valid_quiz()))
+    token, _ = await _login(client)
+    resp = await client.post(
+        "/quiz", headers=_auth(token), json={"content": "内容", "knowledge_base_id": 999}
+    )
+    assert resp.status_code == 404
+
+
+async def test_quiz_with_other_users_kb_404(client, test_app, make_valid_quiz):
+    """指定他人知识库 → 404（WHY：归属校验在路由层，他人库与不存在返回一致，不泄露存在性）"""
+    from app.core.config import Settings
+
+    test_app.state.llm = FakeLLM(quiz=QuizSchema.model_validate(make_valid_quiz()))
+    test_app.state.settings = Settings(deepseek_api_key="test-key", embedding_api_key="test-embed-key",
+                                       jwt_secret="test-secret", auth_mock_openid="user-a")
+    token_a = (await client.post("/auth/login", json={"code": "c"})).json()["token"]
+    kb = (await client.post("/knowledge-base", json={"name": "A的库"}, headers=_auth(token_a))).json()
+
+    test_app.state.settings = Settings(deepseek_api_key="test-key", embedding_api_key="test-embed-key",
+                                       jwt_secret="test-secret", auth_mock_openid="user-b")
+    token_b = (await client.post("/auth/login", json={"code": "c"})).json()["token"]
+    resp = await client.post(
+        "/quiz", headers=_auth(token_b), json={"content": "内容", "knowledge_base_id": kb["id"]}
+    )
+    assert resp.status_code == 404
+
+
+async def test_quiz_strict_mode_full_flow(client, test_app, make_valid_quiz):
+    """严格模式全流程：登录 → 建库 → 上传 → 轮询 ready → 指定库出题 → completed 且注入文档资料。
+    WHY：走真实内存 Chroma + FakeEmbeddings（相同文本余弦≈1 命中，query 与文档一致才可命中）"""
+    quiz = QuizSchema.model_validate(make_valid_quiz())
+    llm = FakeLLM(quiz=quiz)
+    test_app.state.llm = llm
+    token, _ = await _login(client)
+
+    doc_text = "量子比特与经典比特有本质区别。量子叠加态是量子计算的核心概念。" * 5
+    kb = (await client.post("/knowledge-base", json={"name": "量子库"}, headers=_auth(token))).json()
+    upload = await client.post(
+        f"/knowledge-base/{kb['id']}/document",
+        files={"file": ("doc.txt", doc_text, "text/plain")},
+        headers=_auth(token),
+    )
+    assert upload.status_code == 202
+    await _poll(client, f"/knowledge-base/task/{upload.json()['task_id']}")
+
+    resp = await client.post(
+        "/quiz", headers=_auth(token),
+        json={"content": doc_text, "knowledge_base_id": kb["id"]},
+    )
+    assert resp.status_code == 202
+    data = await _poll(client, f"/quiz/{resp.json()['task_id']}")
+    assert data["status"] == "completed"
+    assert llm.doc_materials_received[0] and "量子比特" in llm.doc_materials_received[0]

@@ -7,6 +7,7 @@ from app.core.config import get_settings
 from app.core.db import db_engine
 from app.core.sensitive import load_filter
 from app.core.tasks import task_store
+from app.services.knowledge_base import KnowledgeBaseService
 from app.services.llm import LLMClient
 from app.services.search import SearchClient
 
@@ -26,11 +27,15 @@ def deps(app: FastAPI):
         app.state.db = db_engine
     if not hasattr(app.state, "search"):
         app.state.search = SearchClient(app.state.settings)
+    if not hasattr(app.state, "knowledge_base"):
+        app.state.knowledge_base = KnowledgeBaseService(app.state.settings)
     return app.state.llm, app.state.sensitive, app.state.store, app.state.settings
 
 
 async def get_current_user(request: Request) -> User:
-    """JWT 鉴权依赖（WHY：受保护路由声明 Depends(get_current_user) 即完成鉴权；失败统一 401）"""
+    """JWT 鉴权依赖（WHY：受保护路由声明 Depends(get_current_user) 即完成鉴权；失败统一 401）。
+    解码与签发统一使用 app.state.settings（WHY：签发在 login 用 deps 装配的 settings，解码若另读环境变量
+    会与注入/装配不一致导致 token 不匹配；生产两者同源无行为差异）"""
     from sqlalchemy import select
 
     from app.core.config import get_settings
@@ -40,8 +45,9 @@ async def get_current_user(request: Request) -> User:
     header = request.headers.get("Authorization", "")
     if not header.startswith("Bearer "):
         raise HTTPException(status_code=401, detail={"code": "UNAUTHORIZED", "message": "未登录"})
+    settings = getattr(request.app.state, "settings", None) or get_settings()
     try:
-        user_id = decode_token(header[7:], get_settings())
+        user_id = decode_token(header[7:], settings)
     except AuthError as exc:
         raise HTTPException(status_code=401, detail={"code": exc.code, "message": exc.message})
     db_engine = request.app.state.db
@@ -53,7 +59,8 @@ async def get_current_user(request: Request) -> User:
 
 
 async def get_optional_user(request: Request) -> User | None:
-    """可选鉴权（WHY：匿名仍可生成报告（不落库）——需求文档 4.6 游客模式；带 session_id 时路由层再强校验）"""
+    """可选鉴权（WHY：匿名仍可生成报告（不落库）——需求文档 4.6 游客模式；带 session_id 时路由层再强校验）。
+    解码与签发统一使用 app.state.settings（WHY：与 get_current_user 同源，避免测试/装配注入 settings 时 token 不匹配）"""
     from sqlalchemy import select
 
     from app.core.config import get_settings
@@ -64,7 +71,8 @@ async def get_optional_user(request: Request) -> User | None:
     if not header.startswith("Bearer "):
         return None
     try:
-        user_id = decode_token(header[7:], get_settings())
+        settings = getattr(request.app.state, "settings", None) or get_settings()
+        user_id = decode_token(header[7:], settings)
     except AuthError:
         return None  # token 无效视为游客，不阻断匿名生成报告
     db_engine = request.app.state.db

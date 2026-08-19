@@ -60,7 +60,6 @@ async def test_report_session_id_requires_login(client, make_valid_quiz):
 async def test_report_other_users_session_422(client, test_app, make_valid_quiz):
     """session_id 不属于当前用户 → 422（WHY：防止报告写进他人记录）。
     MOCK 登录所有 code 同一 openid，第二用户直接落库造数据"""
-    from app.core.config import get_settings
     from app.models.db_models import User
     from app.services.auth import issue_token
 
@@ -78,7 +77,8 @@ async def test_report_other_users_session_422(client, test_app, make_valid_quiz)
         await db.commit()
         await db.refresh(other)
         other_id = other.id
-    token_b = issue_token(other_id, get_settings())
+    # 签发与解码同源（WHY：get_current_user 统一从 app.state.settings 解码，测试内签发也必须用同一配置）
+    token_b = issue_token(other_id, test_app.state.settings)
 
     resp = await client.post("/report", headers=_auth(token_b), json={
         "quiz": make_valid_quiz(), "answers": make_valid_answers(),

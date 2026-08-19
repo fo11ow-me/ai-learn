@@ -143,7 +143,6 @@ async def test_get_session_detail(client, make_valid_quiz):
 async def test_get_session_other_user_404(client, test_app, make_valid_quiz):
     """越权访问他人记录 → 404（不泄露存在性）。
     WHY：MOCK 登录所有 code 映射同一 openid，第二个用户直接落库造数据"""
-    from app.core.config import get_settings
     from app.models.db_models import User
     from app.services.auth import issue_token
 
@@ -159,7 +158,8 @@ async def test_get_session_other_user_404(client, test_app, make_valid_quiz):
         await db.commit()
         await db.refresh(other)
         other_id = other.id
-    token_b = issue_token(other_id, get_settings())
+    # 签发与解码同源（WHY：get_current_user 统一从 app.state.settings 解码，测试内签发也必须用同一配置）
+    token_b = issue_token(other_id, test_app.state.settings)
 
     resp = await client.get(f"/user/session/{created['session_id']}", headers=_auth(token_b))
     assert resp.status_code == 404

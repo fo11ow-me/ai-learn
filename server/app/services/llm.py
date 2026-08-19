@@ -12,7 +12,7 @@ from pydantic import BaseModel, ValidationError
 
 from app.core.config import Settings
 from app.core.tracing import task_id_kv, truncate_for_log
-from app.models.schemas import AIReportSchema, AnswerRecord, QuizSchema, SearchPlanSchema
+from app.models.schemas import AIReportSchema, AnswerRecord, KnowledgeJudgeResult, QuizSchema, SearchPlanSchema
 
 QUIZ_TEMPERATURE = 0.7  # 出题温度（方案文档 5.1）
 REPORT_TEMPERATURE = 0.5  # 报告温度（方案文档 5.1）
@@ -42,18 +42,31 @@ class LLMClient:
         self._settings = settings
         self._build_model = build_model or (lambda temperature: _default_build_model(settings, temperature))
 
-    async def generate_quiz(self, content: str, search_results: str | None = None) -> QuizSchema:
-        """基于用户输入（+可选检索资料）生成题库（WHY：search_results 存在时注入【参考资料】段落约束事实来源；
-        None 时模板不渲染该段落，Prompt 与接入搜索前逐字一致）"""
+    async def generate_quiz(
+        self, content: str, search_results: str | None = None, doc_materials: str | None = None
+    ) -> QuizSchema:
+        """基于用户输入（+可选联网资料/知识库文档资料）生成题库（WHY：任一资料存在时注入对应段落约束事实来源；
+        None 时模板不渲染该段落，Prompt 与接入前逐字一致，向后兼容）"""
         prompt = ChatPromptTemplate.from_template(_load_prompt("quiz.txt"), template_format="jinja2").format(
-            content=content, search_results=search_results or ""
+            content=content, search_results=search_results or "", doc_materials=doc_materials or ""
         )
         return await self._invoke_structured(QuizSchema, prompt, QUIZ_TEMPERATURE)
 
-    async def plan_search(self, content: str) -> SearchPlanSchema:
-        """制定联网检索计划（WHY：LLM 只决策 mode/关键词/条数/深度，执行由流水线确定性代码完成）"""
-        prompt = ChatPromptTemplate.from_template(_load_prompt("search_plan.txt")).format(content=content)
+    async def plan_search(self, content: str, missing_topics: list[str] | None = None) -> SearchPlanSchema:
+        """制定联网检索计划（WHY：LLM 只决策 mode/关键词/条数/深度，执行由流水线确定性代码完成）。
+        missing_topics 非空 = 知识库判定不足后的定向补缺（RAG D4：检索计划围绕缺失知识点展开而非用户输入泛搜）"""
+        prompt = ChatPromptTemplate.from_template(_load_prompt("search_plan.txt"), template_format="jinja2").format(
+            content=content, missing_topics=missing_topics or []
+        )
         return await self._invoke_structured(SearchPlanSchema, prompt, SEARCH_PLAN_TEMPERATURE)
+
+    async def judge_knowledge_sufficient(self, content: str, materials: str) -> KnowledgeJudgeResult:
+        """判定知识库片段是否足以覆盖出题（RAG D4：相关性/覆盖度/总量三信号综合判断；
+        判定失败由调用方降级为联网，不阻塞出题）"""
+        prompt = ChatPromptTemplate.from_template(_load_prompt("knowledge_judge.txt"), template_format="jinja2").format(
+            content=content, materials=materials
+        )
+        return await self._invoke_structured(KnowledgeJudgeResult, prompt, SEARCH_PLAN_TEMPERATURE)
 
     async def generate_report(self, quiz: QuizSchema, answers: list[AnswerRecord]) -> AIReportSchema:
         """基于题目与作答生成报告（正确率等统计字段由服务层代码计算，不在本方法范围）"""

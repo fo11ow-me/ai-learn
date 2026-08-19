@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field, model_validator
 JUDGE_OPTIONS = ["正确", "错误"]
 TOTAL_QUESTIONS = 5
 TYPE_DISTRIBUTION = {"single": 2, "multiple": 1, "judge": 2}
+MAX_CONTENT_LENGTH = 2000  # 方案文档 4.1：出题内容上限（超限 422）
 
 
 class QuestionSchema(BaseModel):
@@ -112,6 +113,23 @@ class AIReportSchema(BaseModel):
     quote: str = Field(min_length=1, max_length=30, description="学习金句，用于海报")
 
 
+class QuizCreateRequest(BaseModel):
+    """出题请求（方案文档 4.1 + RAG D4：content 必填，knowledge_base_id 可选）。
+    指定 knowledge_base_id → 严格模式（仅基于该库出题，永不联网）；不指定 → 知识库优先 + 判定 + 缺口联网补缺"""
+
+    content: str = Field(min_length=1, max_length=MAX_CONTENT_LENGTH)
+    knowledge_base_id: int | None = None  # 知识库 id（严格模式；归属校验在路由层）
+
+
+class KnowledgeJudgeResult(BaseModel):
+    """知识充分性判定契约（D4：LLM 判断知识库片段是否足以覆盖出题）。
+    enough=false 时 missing_topics 供检索计划定向联网补缺"""
+
+    enough: bool
+    reason: str = Field(min_length=1, max_length=200)
+    missing_topics: list[str] = Field(default=[], max_length=3)
+
+
 class SearchPlanSchema(BaseModel):
     """联网检索计划（D3：LLM 单次结构化输出，代码按计划执行——决策与执行分离）。
     mode=search 时必须有 1~3 个关键词；mode=extract 时必须有 url，互斥校验"""
@@ -137,6 +155,20 @@ class SearchPlanSchema(BaseModel):
             if self.keywords:
                 raise ValueError("extract 模式不应提供关键词")
         return self
+
+
+class KnowledgeBaseCreate(BaseModel):
+    """创建知识库请求（RAG：名称同用户下唯一）"""
+
+    name: str = Field(min_length=1, max_length=32)
+    description: str = Field(default="", max_length=200)
+
+
+class KnowledgeBaseUpdate(BaseModel):
+    """重命名/改描述知识库请求（至少一项必填，路由层校验）"""
+
+    name: str | None = Field(default=None, min_length=1, max_length=32)
+    description: str | None = Field(default=None, max_length=200)
 
 
 class ReportSchema(BaseModel):
