@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.deps import deps
-from app.api.routes import auth, health, qrcode, quiz, report, user
+from app.api.routes import auth, health, knowledge_base, qrcode, quiz, report, review, user
 from app.core.config import validate_settings
 
 _logger = logging.getLogger(__name__)
@@ -45,6 +45,8 @@ def create_app() -> FastAPI:
     app.include_router(quiz.router)
     app.include_router(report.router)
     app.include_router(qrcode.router)
+    app.include_router(knowledge_base.router)
+    app.include_router(review.router)
     return app
 
 

@@ -4,6 +4,7 @@ SM-2 简化规则（方案设计文档-用户系统 §5.x 契约）：错题收�
 每次重练答对，下次间隔按序列递增（2/4/7 天），连续答对 3 次标记已掌握；重练答错则
 重置回 1 天间隔且累计错过次数 +1。
 """
+from collections import Counter
 from datetime import date, datetime, timedelta
 
 from sqlalchemy import select
@@ -54,3 +55,37 @@ async def due_items(db: AsyncSession, user_id: int) -> list[ReviewItem]:
         ).order_by(ReviewItem.next_review_at.asc())
     )).all()
     return [r[0] for r in rows]
+
+
+async def build_review_board(db: AsyncSession, user_id: int) -> dict:
+    """聚合 GET /user/review 响应（WHY：列表/统计/安排一次查询组装，接口层只透传。
+    due_count = 待重温数（pending 总数，与入口卡徽标/错题本统计口径一致，见 spec 统计场景；
+    是否可练由到期判定单独表达——关卡加载 due_items 而非全部 pending）；
+    schedule = 明日起的未来 7 天按日到期数）"""
+    rows = (await db.execute(
+        select(ReviewItem).where(ReviewItem.user_id == user_id)
+        .order_by(ReviewItem.next_review_at.asc(), ReviewItem.id.asc())
+    )).all()
+    items = [r[0] for r in rows]
+    pending = [i for i in items if i.status == STATUS_PENDING]
+    due_count = len(pending)
+    mastered_count = sum(1 for i in items if i.status == STATUS_MASTERED)
+
+    counts: Counter[date] = Counter(i.next_review_at.date() for i in pending)
+    tomorrow = date.today() + timedelta(days=1)
+    schedule = [
+        {"date": (tomorrow + timedelta(days=i)).isoformat(),
+         "count": counts.get(tomorrow + timedelta(days=i), 0)}
+        for i in range(7)
+    ]
+
+    return {
+        "summary": {"due_count": due_count, "mastered_count": mastered_count},
+        "items": [{
+            "id": i.id, "question": i.question_json, "question_type": i.question_type,
+            "knowledge_point": i.knowledge_point, "missed_count": i.missed_count,
+            "correct_streak": i.correct_streak,
+            "next_review_at": i.next_review_at.isoformat(), "status": i.status,
+        } for i in pending],
+        "schedule": schedule,
+    }
