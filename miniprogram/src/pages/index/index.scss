@@ -65,6 +65,118 @@
   margin-top: 32rpx;
 }
 
+// 出题资料选择条（RAG 选库入口；仅登录且有知识库时渲染）
+.kb-picker {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 24rpx;
+  padding: 20rpx 28rpx;
+  background: rgba(58, 107, 92, 0.06);
+  border-radius: 16rpx;
+
+  .kb-picker-info {
+    display: flex;
+    flex-direction: column;
+    gap: 6rpx;
+    min-width: 0;
+  }
+
+  .kb-picker-label {
+    font-size: 20rpx;
+    letter-spacing: 0.2em;
+    color: $mist;
+  }
+
+  .kb-picker-value {
+    font-size: 26rpx;
+    color: $lake;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .kb-picker-arrow {
+    color: $wood;
+    font-size: 26rpx;
+    margin-left: 16rpx;
+    flex-shrink: 0;
+  }
+}
+
+// 选库弹层（底部抽屉）
+.mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(44, 58, 51, 0.4);
+  z-index: 10;
+  display: flex;
+  align-items: flex-end;
+}
+
+.kb-sheet {
+  width: 100%;
+  max-height: 70vh;
+  overflow-y: auto;
+  background: $page;
+  border-radius: 28rpx 28rpx 0 0;
+  padding: 36rpx 44rpx calc(36rpx + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+
+  .kb-sheet-title {
+    display: block;
+    font-family: $font-serif;
+    font-size: 34rpx;
+    color: $ink;
+    margin-bottom: 8rpx;
+  }
+
+  .kb-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 26rpx 8rpx;
+    border-bottom: 1rpx solid rgba(139, 111, 71, 0.18);
+
+    &.active .kb-option-name {
+      color: $lake;
+    }
+
+    .kb-option-main {
+      display: flex;
+      flex-direction: column;
+      gap: 6rpx;
+      min-width: 0;
+    }
+
+    .kb-option-name {
+      font-size: 30rpx;
+      color: $ink;
+      font-weight: 600;
+    }
+
+    .kb-option-desc {
+      font-size: 22rpx;
+      color: $fog;
+    }
+
+    .kb-option-check {
+      color: $lake;
+      font-size: 32rpx;
+      margin-left: 20rpx;
+      flex-shrink: 0;
+    }
+  }
+
+  .kb-sheet-manage {
+    margin-top: 28rpx;
+    text-align: center;
+    font-size: 26rpx;
+    color: $wood;
+    letter-spacing: 0.1em;
+  }
+}
+
 .arrow {
   font-family: $font-serif;
 }

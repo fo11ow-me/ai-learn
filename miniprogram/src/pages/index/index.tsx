@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Button, Text, Textarea, View } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
+import { listKnowledgeBases, KnowledgeBase } from '../../api/knowledgeBase'
 import { createQuizTask, getQuizTask } from '../../api/quiz'
 import { getMe } from '../../api/user'
 import { usePollingTask } from '../../hooks/usePollingTask'
@@ -34,6 +35,10 @@ export default function Index() {
   const [createError, setCreateError] = useState<TaskError | null>(null)
   // 最近学习主题（有历史时替换兜底主题，点击行为不变：填入输入框）
   const [topics, setTopics] = useState<{ title: string; tag?: string }[]>(FALLBACK_TOPICS)
+  // 知识库选库（RAG）：null = 自动（知识库+联网）；指定 id = 严格模式（仅基于该库出题）
+  const [kbList, setKbList] = useState<KnowledgeBase[]>([])
+  const [kbPickerOpen, setKbPickerOpen] = useState(false)
+  const [selectedKbId, setSelectedKbId] = useState<number | null>(null)
   const statusBarHeight = useStatusBarHeight()
   const pageStyle = { paddingTop: `${statusBarHeight}px` }
 
@@ -54,8 +59,21 @@ export default function Index() {
       .catch(() => {})  // 游客/网络异常：保持兜底主题，不打扰用户
   }, [])
 
+  // 拉取知识库列表（WHY：选库入口需要最新库清单；游客 401 静默隐藏选择器，不打扰）
+  const loadKnowledgeBases = useCallback(() => {
+    listKnowledgeBases()
+      .then((d) => {
+        setKbList(d.items)
+        // 已选中的库被删除 → 回到自动模式（WHY：失效选择会让出题 404）
+        if (selectedKbId !== null && !d.items.some((kb) => kb.id === selectedKbId)) {
+          setSelectedKbId(null)
+        }
+      })
+      .catch(() => setKbList([]))
+  }, [selectedKbId])
+
   useEffect(loadRecentTopics, [loadRecentTopics])  // 首次挂载必拉取（WHY：H5 刷新时 onShow 早于组件挂载，useDidShow 会丢失）
-  useDidShow(loadRecentTopics)  // tab 切换/闯关返回时刷新
+  useDidShow(() => { loadRecentTopics(); loadKnowledgeBases() })  // tab 切换/闯关返回/知识库管理后刷新
 
   const polling = usePollingTask<Quiz>(taskId, async (id) => {
     const resp = await getQuizTask(id)
@@ -66,10 +84,11 @@ export default function Index() {
   const generating = taskId !== null && polling.status !== 'failed'
   const failed = taskId !== null && polling.status === 'failed'
 
-  // 出题完成 → 写入 Storage 并进入闯关页（quiz 数据与作答记录经 Storage 传页）
+  // 出题完成 → 写入 Storage 并进入闯关页（quiz 数据与作答记录经 Storage 传页；
+  // quiz_data 附带 knowledge_base_id 透传（WHY：答题/结算环节可感知本题的知识库来源））
   useEffect(() => {
     if (polling.status === 'completed' && polling.data) {
-      Taro.setStorageSync('quiz_data', polling.data)
+      Taro.setStorageSync('quiz_data', { ...polling.data, knowledge_base_id: selectedKbId })
       Taro.setStorageSync('quiz_content', content)  // 新增：结算/防刷需要用户输入原文
       Taro.removeStorageSync('quiz_answers')
       Taro.removeStorageSync('quiz_duration')
@@ -78,7 +97,7 @@ export default function Index() {
     }
   }, [polling.status, polling.data])
 
-  /** 发出发题请求（点击"开始漫步"或失败后重试） */
+  /** 发出发题请求（点击"开始漫步"或失败后重试）；指定知识库 → 严格模式 */
   const handleStart = async () => {
     if (!content.trim()) {
       Taro.showToast({ title: '先写下想学的知识吧', icon: 'none' })
@@ -86,13 +105,16 @@ export default function Index() {
     }
     setCreateError(null)
     try {
-      const resp = await createQuizTask(content.trim())
+      const resp = await createQuizTask(content.trim(), selectedKbId ?? undefined)
       setTaskId(resp.task_id)
     } catch (e) {
       setCreateError(e as TaskError)
       setTaskId(null)
     }
   }
+
+  /** 已选库名（选择条展示）；null = 自动模式 */
+  const selectedKbName = kbList.find((kb) => kb.id === selectedKbId)?.name ?? null
 
   // 生成中 / 失败 均展示屏 2（原型：雾散）
   if (generating || failed) {
@@ -143,9 +165,69 @@ export default function Index() {
           </View>
         </View>
 
+        {/* 出题资料选择条（仅登录且有知识库时展示；游客/无库保持默认自动模式，不出现死 UI） */}
+        {kbList.length > 0 && (
+          <View className='kb-picker' onClick={() => setKbPickerOpen(true)}>
+            <View className='kb-picker-info'>
+              <Text className='kb-picker-label'>出题资料</Text>
+              <Text className='kb-picker-value'>
+                {selectedKbId === null ? '自动：知识库 + 联网' : `${selectedKbName} · 仅基于该库出题`}
+              </Text>
+            </View>
+            <Text className='kb-picker-arrow'>▾</Text>
+          </View>
+        )}
+
         <Button className='btn-primary start-btn' onClick={handleStart}>
           开始漫步 <Text className='arrow'>→</Text>
         </Button>
+
+        {/* 选库弹层：自动 + 各库 + 管理入口 */}
+        {kbPickerOpen && (
+          <View className='mask' onClick={() => setKbPickerOpen(false)}>
+            <View className='kb-sheet' onClick={(e) => e.stopPropagation()}>
+              <Text className='kb-sheet-title'>选择出题资料</Text>
+              <View
+                className={`kb-option ${selectedKbId === null ? 'active' : ''}`}
+                onClick={() => {
+                  setSelectedKbId(null)
+                  setKbPickerOpen(false)
+                }}
+              >
+                <View className='kb-option-main'>
+                  <Text className='kb-option-name'>自动（知识库 + 联网）</Text>
+                  <Text className='kb-option-desc'>检索你的知识库，资料不足时联网补全</Text>
+                </View>
+                {selectedKbId === null && <Text className='kb-option-check'>✓</Text>}
+              </View>
+              {kbList.map((kb) => (
+                <View
+                  key={kb.id}
+                  className={`kb-option ${selectedKbId === kb.id ? 'active' : ''}`}
+                  onClick={() => {
+                    setSelectedKbId(kb.id)
+                    setKbPickerOpen(false)
+                  }}
+                >
+                  <View className='kb-option-main'>
+                    <Text className='kb-option-name'>{kb.name}</Text>
+                    <Text className='kb-option-desc'>仅基于该库出题 · {kb.ready_count} 份可出题</Text>
+                  </View>
+                  {selectedKbId === kb.id && <Text className='kb-option-check'>✓</Text>}
+                </View>
+              ))}
+              <View
+                className='kb-sheet-manage'
+                onClick={() => {
+                  setKbPickerOpen(false)
+                  Taro.navigateTo({ url: '/pages/knowledge-base/index' })
+                }}
+              >
+                管理知识库 ›
+              </View>
+            </View>
+          </View>
+        )}
 
         <View className='divider'>或沿旧径重游</View>
 

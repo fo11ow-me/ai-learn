@@ -14,6 +14,12 @@ const ERROR_MESSAGES: Record<string, string> = {
   TOKEN_EXPIRED: '登录已过期，请重试',
   INVALID_NICKNAME: '昵称无效，请更换',
   NOT_FOUND: '记录不存在',
+  KB_NOT_CONFIGURED: '知识库功能未配置，请联系管理员',
+  UNSUPPORTED_TYPE: '不支持的文件格式（支持 pdf/docx/md/txt）',
+  FILE_TOO_LARGE: '文件超过大小上限（10MB）',
+  PARSE_FAILED: '文档解析失败（扫描版 PDF 请提供可复制文本）',
+  NAME_EXISTS: '知识库名称已存在',
+  KB_INDEX_FAILED: '文档解析失败，请重新上传',
 }
 
 interface RequestOptions extends Omit<Taro.request.Option, 'url' | 'success' | 'fail'> {

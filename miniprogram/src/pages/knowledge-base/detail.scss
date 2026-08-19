@@ -1,0 +1,151 @@
+@use '../../styles/variables.scss' as *;
+
+.page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  background: $paper;
+}
+
+.body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 16rpx 44rpx calc(48rpx + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+}
+
+.nav-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 44rpx;
+  height: 88rpx;
+
+  .nav-back {
+    width: 56rpx;
+    height: 56rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    .nav-back-icon {
+      width: 22rpx;
+      height: 22rpx;
+      border-left: 4rpx solid $ink;
+      border-bottom: 4rpx solid $ink;
+      transform: rotate(45deg);
+    }
+  }
+
+  .nav-title {
+    font-family: $font-serif;
+    font-size: 34rpx;
+    color: $ink;
+  }
+
+  .nav-side {
+    width: 56rpx;
+  }
+}
+
+.page-sub {
+  font-size: 26rpx;
+  color: $fog;
+  margin-top: 12rpx;
+}
+
+.upload-btn {
+  margin: 28rpx 0 8rpx;
+}
+
+.empty {
+  text-align: center;
+  color: $fog;
+  font-size: 26rpx;
+  padding: 80rpx 0;
+}
+
+// 文档卡片
+.doc-card {
+  display: flex;
+  align-items: center;
+  background: $page;
+  border-radius: 20rpx;
+  padding: 24rpx;
+  margin-top: 20rpx;
+  box-shadow: 0 4rpx 12rpx rgba(44, 58, 51, 0.06);
+
+  .doc-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .doc-name {
+    font-size: 30rpx;
+    color: $ink;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .doc-meta {
+    display: flex;
+    align-items: center;
+    gap: 16rpx;
+    margin-top: 10rpx;
+
+    .doc-status {
+      font-size: 22rpx;
+      padding: 4rpx 14rpx;
+      border-radius: 999rpx;
+
+      &.uploading {
+        background: #F3E7C9;
+        color: $dawn;
+      }
+
+      &.ready {
+        background: #E4EFE8;
+        color: $moss;
+      }
+
+      &.failed {
+        background: #F5E4E0;
+        color: $maple;
+      }
+    }
+
+    .doc-time,
+    .doc-chunks {
+      font-size: 22rpx;
+      color: $fog;
+    }
+  }
+
+  .doc-fail-hint {
+    font-size: 22rpx;
+    color: $maple;
+    margin-top: 8rpx;
+  }
+
+  .doc-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 12rpx;
+    margin-left: 16rpx;
+
+    .doc-action {
+      font-size: 24rpx;
+      color: $lake;
+
+      &.danger {
+        color: $maple;
+      }
+    }
+  }
+}
