@@ -1,0 +1,231 @@
+@use '../../styles/variables.scss' as *;
+
+.page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  background: $paper;
+}
+
+.body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 16rpx 44rpx calc(48rpx + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+}
+
+// 自绘导航条（与知识库页同构）
+.nav-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 44rpx;
+  height: 88rpx;
+
+  .nav-back {
+    width: 56rpx;
+    height: 56rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    .nav-back-icon {
+      width: 22rpx;
+      height: 22rpx;
+      border-left: 4rpx solid $ink;
+      border-bottom: 4rpx solid $ink;
+      transform: rotate(45deg);
+    }
+  }
+
+  .nav-title {
+    font-family: $font-serif;
+    font-size: 34rpx;
+    color: $ink;
+  }
+
+  .nav-side {
+    width: 56rpx;
+  }
+}
+
+.page-title {
+  font-family: $font-serif;
+  font-size: 44rpx;
+  color: $ink;
+  margin-top: 20rpx;
+}
+
+.page-sub {
+  font-size: 26rpx;
+  color: $fog;
+  margin-top: 12rpx;
+}
+
+.empty {
+  text-align: center;
+  color: $fog;
+  font-size: 26rpx;
+  padding: 80rpx 0;
+}
+
+// 艾宾浩斯提醒 banner（原型 .review-banner：晨光金渐变 + 圆形铃铛）
+.review-banner {
+  display: flex;
+  align-items: center;
+  gap: 24rpx;
+  padding: 26rpx 30rpx;
+  margin-top: 28rpx;
+  background: linear-gradient(90deg, #F4EEE0, #FBF6EA);
+  border: 2rpx solid rgba(217, 164, 65, 0.4);
+  border-radius: 28rpx;
+
+  .bell {
+    width: 68rpx;
+    height: 68rpx;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background: $dawn;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: $font-serif;
+    font-size: 30rpx;
+  }
+
+  .banner-text {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .t {
+    font-size: 25rpx;
+    font-weight: 600;
+    color: $ink;
+  }
+
+  .s {
+    font-size: 21rpx;
+    color: $wood;
+    margin-top: 6rpx;
+  }
+
+  .go {
+    font-size: 22rpx;
+    color: $lake;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+}
+
+// 错题卡（原型 .mistake-card：题干 + 知识点标签 + 错过次数/下次时间）
+.mistake-card {
+  padding: 26rpx 30rpx;
+  margin-bottom: 20rpx;
+
+  .q {
+    font-size: 25rpx;
+    font-weight: 600;
+    line-height: 1.6;
+    color: $ink;
+  }
+
+  .meta {
+    display: flex;
+    align-items: center;
+    gap: 16rpx;
+    margin-top: 18rpx;
+    flex-wrap: wrap;
+  }
+
+  .kp {
+    font-size: 19rpx;
+    color: $lake;
+    border: 2rpx solid rgba(58, 107, 92, 0.4);
+    border-radius: 999rpx;
+    padding: 4rpx 18rpx;
+  }
+
+  .when {
+    font-size: 20rpx;
+    color: $maple;
+    margin-left: auto;
+    white-space: nowrap;
+  }
+}
+
+// 复习安排（原型 .recent：📅 日期 + 该日知识点）
+.recent {
+  padding: 24rpx 30rpx;
+
+  .row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20rpx;
+    padding: 14rpx 0;
+    border-bottom: 2rpx dashed rgba(139, 111, 71, 0.2);
+
+    &:last-child {
+      border-bottom: none;
+    }
+  }
+
+  .f {
+    color: $ink;
+    font-size: 24rpx;
+    white-space: nowrap;
+  }
+
+  .s {
+    font-size: 20rpx;
+    color: $fog;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+// 空态卡片（无错题/加载失败共用）
+.empty-card {
+  padding: 60rpx 40rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-top: 28rpx;
+
+  .empty-title {
+    font-family: $font-serif;
+    font-size: 32rpx;
+    color: $ink;
+  }
+
+  .empty-sub {
+    font-size: 24rpx;
+    color: $fog;
+    margin-top: 12rpx;
+  }
+}
+
+.go-btn {
+  margin-top: 40rpx;
+}
+
+.arrow {
+  font-family: $font-serif;
+}
+
+.subscribe-btn {
+  margin-top: 28rpx;
+  height: 84rpx;
+  font-size: 26rpx;
+}
+
+// 开启宝藏关卡（列表底部固定，关卡页跳转由 play 视图承接）
+.body > .btn-primary:last-child {
+  margin-top: 28rpx;
+}

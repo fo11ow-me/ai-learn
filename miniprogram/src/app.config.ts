@@ -4,7 +4,10 @@ export default defineAppConfig({
     'pages/profile/index',
     'pages/quiz/index',
     'pages/report/index',
-    'pages/poster/index'
+    'pages/poster/index',
+    'pages/knowledge-base/index',
+    'pages/knowledge-base/detail',
+    'pages/review/index'
   ],
   window: {
     backgroundTextStyle: 'light',
