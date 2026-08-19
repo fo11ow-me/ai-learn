@@ -124,7 +124,7 @@ export default function ReviewPage() {
         {/* 待重温错题列表（全部 pending 条目；未到期条目标注下次复习时间） */}
         <View className='sec-h'>待重温 · {summary.due_count} 道</View>
         {items.map((item) => (
-          <View key={item.id} className='card mistake-card'>
+          <View key={item.id} className='card mistake-card' onClick={goPlay}>
             <View className='q'>{item.question.question}（{TYPE_LABEL[item.question_type]}）</View>
             <View className='meta'>
               <Text className='kp'>{item.knowledge_point || '未标注知识点'}</Text>
