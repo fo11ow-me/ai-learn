@@ -22,7 +22,7 @@ function NavBar() {
   return (
     <View className='nav-bar'>
       <View className='nav-back' onClick={() => Taro.switchTab({ url: '/pages/index/index' })}>
-        <Text className='nav-back-icon'>{'<'}</Text>
+        <View className='nav-back-icon' />
       </View>
       <Text className='nav-title'>闯关</Text>
       <View className='nav-side' />

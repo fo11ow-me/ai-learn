@@ -23,12 +23,31 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    // 返回键点击区域加大，防误触；'<' 字形细，字号加粗补偿视觉重量
+    // 返回键点击区域加大，防误触；箭头用两条 45° 线段绘制（WHY：字符 ‹ 字形视觉高仅约 0.37em，
+    // 视觉尺寸不可控且小于原生；CSS 线段可精确对齐微信原生返回键视觉尺寸 44×26rpx）
     .nav-back-icon {
-      color: $lake;
-      font-size: 56rpx;
-      font-weight: 700;
-      line-height: 1;
+      position: relative;
+      width: 26rpx;
+      height: 44rpx;
+
+      &::before,
+      &::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        width: 31rpx;
+        height: 4rpx;
+        border-radius: 2rpx;
+        background: $lake;
+      }
+      &::before {
+        top: 11rpx;
+        transform: rotate(-45deg);
+      }
+      &::after {
+        bottom: 11rpx;
+        transform: rotate(45deg);
+      }
     }
   }
 
