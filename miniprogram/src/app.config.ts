@@ -7,7 +7,8 @@ export default defineAppConfig({
     'pages/poster/index',
     'pages/knowledge-base/index',
     'pages/knowledge-base/detail',
-    'pages/review/index'
+    'pages/review/index',
+    'pages/review/play'
   ],
   window: {
     backgroundTextStyle: 'light',

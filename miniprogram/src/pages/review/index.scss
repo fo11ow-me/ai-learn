@@ -225,7 +225,13 @@
   font-size: 26rpx;
 }
 
-// 开启宝藏关卡（列表底部固定，关卡页跳转由 play 视图承接）
+// 开启宝藏关卡（列表底部固定；到期 0 时灰化禁用，点击仍可 toast 提示）
 .body > .btn-primary:last-child {
   margin-top: 28rpx;
+}
+
+.btn-primary.disabled {
+  background: $mist;
+  box-shadow: 0 6rpx 0 rgba(44, 74, 62, 0.5);
+  color: rgba(251, 248, 239, 0.85);
 }

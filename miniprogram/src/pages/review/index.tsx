@@ -5,47 +5,13 @@ import { getReview } from '../../api/review'
 import { registerSubscribe } from '../../api/subscribe'
 import { REVIEW_TMPL_ID } from '../../config'
 import { useStatusBarHeight } from '../../hooks/useStatusBarHeight'
-import { ReviewBoard, ReviewItem } from '../../types/review'
+import { ReviewBoard } from '../../types/review'
 import { TaskError } from '../../types/report'
+import { dayLabel, isDue, nextLabel } from '../../utils/review'
 import './index.scss'
 
 /** 题型中文标注（与答题页一致） */
 const TYPE_LABEL: Record<string, string> = { single: '单选', multiple: '多选', judge: '判断' }
-
-/** 到期判定（服务端契约：next_review_at 当天 <= 今日即到期，可进宝藏关卡） */
-function isDue(item: ReviewItem): boolean {
-  const d = new Date(item.next_review_at)
-  const today = new Date()
-  d.setHours(0, 0, 0, 0)
-  today.setHours(0, 0, 0, 0)
-  return d.getTime() <= today.getTime()
-}
-
-/** 下次复习相对文案（原型「明日/后天/3 天后」；跨月显示 M/D） */
-function nextLabel(iso: string): string {
-  const d = new Date(iso)
-  const today = new Date()
-  d.setHours(0, 0, 0, 0)
-  today.setHours(0, 0, 0, 0)
-  const diff = Math.round((d.getTime() - today.getTime()) / 86400000)
-  if (diff <= 0) return '今日'
-  if (diff === 1) return '明日'
-  if (diff === 2) return '后天'
-  if (diff < 30) return `${diff} 天后`
-  return `${d.getMonth() + 1}/${d.getDate()}`
-}
-
-/** 复习安排日期文案（明日起未来 7 天，跨周带星期） */
-function dayLabel(dateStr: string): string {
-  const d = new Date(`${dateStr}T00:00:00`)
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  d.setHours(0, 0, 0, 0)
-  const diff = Math.round((d.getTime() - today.getTime()) / 86400000)
-  if (diff === 1) return '明日'
-  if (diff === 2) return '后天'
-  return `${d.getMonth() + 1}/${d.getDate()}（周${'日一二三四五六'[d.getDay()]}）`
-}
 
 /** 自绘导航条（与知识库页同构：返回键 + 标题） */
 function NavBar() {
@@ -79,6 +45,15 @@ export default function ReviewPage() {
   useEffect(load, [load])
   // 从宝藏关卡返回时刷新（重练后调度已更新）
   useDidShow(load)
+
+  /** 进入宝藏关卡（到期 0 时禁用并提示；WHY：不用 Button disabled 属性——disabled 不触发 onClick，无法给出提示文案） */
+  const goPlay = () => {
+    if (dueToday === 0) {
+      Taro.showToast({ title: '今日无待重温错题', icon: 'none' })
+      return
+    }
+    Taro.navigateTo({ url: '/pages/review/play' })
+  }
 
   /** 订阅复习提醒（仅微信环境；wx.requestSubscribeMessage 授权成功才登记配额，拒绝静默） */
   const handleSubscribe = async () => {
@@ -124,7 +99,7 @@ export default function ReviewPage() {
   }
 
   const { summary, items, schedule } = board as ReviewBoard
-  const dueToday = items.filter((i) => isDue(i)).length
+  const dueToday = items.filter((i) => isDue(i.next_review_at)).length
 
   return (
     <View className='page' style={pageStyle}>
@@ -143,7 +118,7 @@ export default function ReviewPage() {
             </View>
             <View className='s'>今天复习，记忆保留率可提升 62%</View>
           </View>
-          <Text className='go'>{dueToday > 0 ? '去重温 〉' : ''}</Text>
+          <Text className='go' onClick={goPlay}>{dueToday > 0 ? '去重温 〉' : ''}</Text>
         </View>
 
         {/* 待重温错题列表（全部 pending 条目；未到期条目标注下次复习时间） */}
@@ -191,16 +166,8 @@ export default function ReviewPage() {
           </Button>
         )}
 
-        {/* 开启宝藏关卡（到期 0 时禁用；任务 10.1 接通跳转） */}
-        <Button
-          className='btn-primary'
-          disabled={dueToday === 0}
-          onClick={() => {
-            if (dueToday === 0) {
-              Taro.showToast({ title: '今日无待重温错题', icon: 'none' })
-            }
-          }}
-        >
+        {/* 开启宝藏关卡（到期 0 时灰化禁用，点击提示；WHY：disabled 属性不触发 onClick，无法 toast 提示） */}
+        <Button className={`btn-primary ${dueToday === 0 ? 'disabled' : ''}`} onClick={goPlay}>
           开启“宝藏关卡” <Text className='arrow'>→</Text>
         </Button>
       </View>
