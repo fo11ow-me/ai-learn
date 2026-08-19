@@ -5,7 +5,8 @@ from datetime import datetime, timedelta
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.db_models import CoinTransaction, QuizSession, User
+from app.models.db_models import CoinTransaction, QuizSession, ReviewItem, User
+from app.services.review import REVIEW_INTERVAL_DAYS, STATUS_PENDING
 
 COIN_CORRECT = 10      # 答对 +10（需求文档-用户系统 4.3）
 COIN_WRONG = -5        # 答错 −5
@@ -27,14 +28,25 @@ def content_hash(content: str) -> str:
 
 def grade_answers(quiz: dict, answers: list[dict]) -> tuple[int, int]:
     """服务端判分：返回 (total, correct)。多选必须全中（WHY：不信任前端判分）"""
+    total, correct, _ = grade_answers_with_wrong(quiz, answers)
+    return total, correct
+
+
+def grade_answers_with_wrong(quiz: dict, answers: list[dict]) -> tuple[int, int, list[dict]]:
+    """服务端判分：返回 (total, correct, wrong_questions)。
+    wrong_questions 为答错题目 dict 快照列表（WHY：结算事务内错题收录与判分共用一套规则，
+    避免同一判分逻辑两处实现漂移；题目 id 不存在的作答既不算对也不进错题，与判分语义一致）"""
     qmap = {q["id"]: q for q in quiz["questions"]}
     total = len(quiz["questions"])
     correct = 0
+    wrong_questions = []
     for a in answers:
         q = qmap.get(a["question_id"])
         if q is not None and sorted(a["selected"]) == sorted(q["answer"]):
             correct += 1
-    return total, correct
+        elif q is not None:
+            wrong_questions.append(q)
+    return total, correct, wrong_questions
 
 
 def compute_deltas(correct: int, total: int, coins: int) -> list[int]:
@@ -62,7 +74,7 @@ async def settle_session(db: AsyncSession, *, user: User, session_key: str, cont
     if existing is not None:
         raise SessionAlreadyExists(existing)
 
-    total, correct = grade_answers(quiz, answers)
+    total, correct, wrong_questions = grade_answers_with_wrong(quiz, answers)
     correct_rate = round(correct / total * 100) if total else 0
     c_hash = content_hash(content)
     now = datetime.now()
@@ -84,6 +96,16 @@ async def settle_session(db: AsyncSession, *, user: User, session_key: str, cont
     )
     db.add(session)
     await db.flush()  # 取 session.id
+    # 错题收录（WHY：与流水/余额同事务——结算成功必有错题，无异步丢失窗口；
+    # 幂等命中路径在上面已提前抛 SessionAlreadyExists，不会走到这里重复收录）
+    for q in wrong_questions:
+        db.add(ReviewItem(
+            user_id=user.id, session_id=session.id,
+            question_json=q, question_type=q["type"],
+            knowledge_point=q["knowledge_point"],
+            missed_count=1, correct_streak=0,
+            next_review_at=now + timedelta(days=REVIEW_INTERVAL_DAYS[0]),
+            status=STATUS_PENDING, created_at=now))
     if counted:
         for delta in deltas:
             if delta == 0:  # 封底为 0 的扣减无意义，不记流水
