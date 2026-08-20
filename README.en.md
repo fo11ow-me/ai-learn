@@ -57,9 +57,9 @@ flowchart LR
 |---|---|---|
 | <img src="assets/screenshots/home.png" width="200" alt="home"> | <img src="assets/screenshots/quiz.png" width="200" alt="quiz"> | <img src="assets/screenshots/profile.png" width="200" alt="profile"> |
 
-| Knowledge Base List | Knowledge Base Detail |
-|---|---|
-| <img src="assets/screenshots/knowledge-base.png" width="200" alt="knowledge-base"> | <img src="assets/screenshots/knowledge-base-detail.png" width="200" alt="knowledge-base-detail"> |
+| Knowledge Base List | Knowledge Base Detail | Treasure Level |
+|---|---|---|
+| <img src="assets/screenshots/knowledge-base.png" width="200" alt="knowledge-base"> | <img src="assets/screenshots/knowledge-base-detail.png" width="200" alt="knowledge-base-detail"> | <img src="assets/screenshots/review-play.png" width="200" alt="review-play"> |
 
 | Review Report | Review Book |
 |---|---|
