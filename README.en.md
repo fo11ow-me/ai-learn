@@ -4,6 +4,8 @@
 
 [中文](README.md) | English
 
+**License**: [MIT](LICENSE)
+
 ---
 
 ## Introduction

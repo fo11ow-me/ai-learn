@@ -4,6 +4,8 @@
 
 中文 | [English](README.en.md)
 
+**License**: [MIT](LICENSE) · 开源学习项目，欢迎 Star ⭐
+
 ---
 
 ## 介绍
