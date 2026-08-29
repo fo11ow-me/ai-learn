@@ -1,4 +1,4 @@
-"""金币结算服务（WHY：判分/防刷/流水/余额在同一事务内完成——防作弊关键路径；路由层只做参数校验与幂等转译）"""
+"""金币结算服务：判分/防刷/流水/余额在同一事务内完成——防作弊关键路径；路由层只做参数校验与幂等转译。"""
 import hashlib
 from datetime import datetime, timedelta
 
@@ -22,20 +22,22 @@ class SessionAlreadyExists(Exception):
 
 
 def content_hash(content: str) -> str:
-    """内容 MD5（WHY：24h 防刷判定的键；原文已落库可审计）"""
+    """内容 MD5：24h 防刷判定的键；原文已落库可审计。"""
     return hashlib.md5(content.encode("utf-8")).hexdigest()
 
 
 def grade_answers(quiz: dict, answers: list[dict]) -> tuple[int, int]:
-    """服务端判分：返回 (total, correct)。多选必须全中（WHY：不信任前端判分）"""
+    """服务端判分：返回 (total, correct)。多选必须全中——不信任前端判分。"""
     total, correct, _ = grade_answers_with_wrong(quiz, answers)
     return total, correct
 
 
 def grade_answers_with_wrong(quiz: dict, answers: list[dict]) -> tuple[int, int, list[dict]]:
     """服务端判分：返回 (total, correct, wrong_questions)。
-    wrong_questions 为答错题目 dict 快照列表（WHY：结算事务内错题收录与判分共用一套规则，
-    避免同一判分逻辑两处实现漂移；题目 id 不存在的作答既不算对也不进错题，与判分语义一致）"""
+
+    wrong_questions 为答错题目 dict 快照列表：结算事务内错题收录与判分共用一套规则，
+    避免同一判分逻辑两处实现漂移；题目 id 不存在的作答既不算对也不进错题，与判分语义一致。
+    """
     qmap = {q["id"]: q for q in quiz["questions"]}
     total = len(quiz["questions"])
     correct = 0
@@ -50,8 +52,10 @@ def grade_answers_with_wrong(quiz: dict, answers: list[dict]) -> tuple[int, int,
 
 
 def compute_deltas(correct: int, total: int, coins: int) -> list[int]:
-    """逐题金币变动：答对 +10 / 答错 −5；余额不足时封底（扣至 0，不出现负余额），
-    返回的 delta 列表顺序为先答对题后答错题（WHY：仅用于结算，无需与题序对应）"""
+    """逐题金币变动：答对 +10 / 答错 −5；余额不足时封底（扣至 0，不出现负余额）。
+
+    返回的 delta 列表顺序为先答对题后答错题——仅用于结算，无需与题序对应。
+    """
     wrong = total - correct
     deltas = [COIN_CORRECT] * correct
     balance = coins + correct * COIN_CORRECT
@@ -68,7 +72,9 @@ def compute_deltas(correct: int, total: int, coins: int) -> list[int]:
 async def settle_session(db: AsyncSession, *, user: User, session_key: str, content: str,
                          quiz: dict, answers: list[dict]) -> QuizSession:
     """结算闯关：判分 → 防刷 → 逐题流水 + 余额更新（单事务）。
-    幂等：同 (user, session_key) 已存在时抛 SessionAlreadyExists（WHY：网络重试不重复入账）"""
+
+    幂等：同 (user, session_key) 已存在时抛 SessionAlreadyExists——网络重试不重复入账。
+    """
     existing = await db.scalar(select(QuizSession).where(
         QuizSession.user_id == user.id, QuizSession.session_key == session_key))
     if existing is not None:
@@ -96,8 +102,8 @@ async def settle_session(db: AsyncSession, *, user: User, session_key: str, cont
     )
     db.add(session)
     await db.flush()  # 取 session.id
-    # 错题收录（WHY：与流水/余额同事务——结算成功必有错题，无异步丢失窗口；
-    # 幂等命中路径在上面已提前抛 SessionAlreadyExists，不会走到这里重复收录）
+    # 错题收录：与流水/余额同事务——结算成功必有错题，无异步丢失窗口；
+    # 幂等命中路径在上面已提前抛 SessionAlreadyExists，不会走到这里重复收录
     for q in wrong_questions:
         db.add(ReviewItem(
             user_id=user.id, session_id=session.id,

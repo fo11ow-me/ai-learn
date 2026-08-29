@@ -1,4 +1,4 @@
-"""认证服务测试（WHY：MOCK 登录、JWT 签发/校验、过期/无效 token、code2session 失败兜底）"""
+"""认证服务测试：MOCK 登录、JWT 签发/校验、过期/无效 token、code2session 失败兜底。"""
 import time
 
 import jwt

@@ -1,4 +1,4 @@
-"""错题重练服务（WHY：遗忘曲线调度与错题聚合集中一处；纯函数便于单测穷举状态转移）
+"""错题重练服务：遗忘曲线调度与错题聚合集中一处；纯函数便于单测穷举状态转移。
 
 SM-2 简化规则（方案设计文档-用户系统 §5.x 契约）：错题收录即错过 1 次，初始间隔 1 天；
 每次重练答对，下次间隔按序列递增（2/4/7 天），连续答对 3 次标记已掌握；重练答错则
@@ -45,7 +45,9 @@ def is_due(item: ReviewItem, today: datetime | None = None) -> bool:
 
 async def due_items(db: AsyncSession, user_id: int) -> list[ReviewItem]:
     """查询到期错题（pending 且 next_review_at 早于明日 0 点，按到期时间升序）。
-    WHY：用严格不等上界等价 next_review_at.date() <= today——日期列不加函数包裹才能走索引"""
+
+    用严格不等上界等价 next_review_at.date() <= today——日期列不加函数包裹才能走索引。
+    """
     tomorrow = datetime.combine(date.today() + timedelta(days=1), datetime.min.time())
     rows = (await db.execute(
         select(ReviewItem).where(
@@ -58,7 +60,7 @@ async def due_items(db: AsyncSession, user_id: int) -> list[ReviewItem]:
 
 
 class ReviewSubmitError(Exception):
-    """重练提交校验失败（路由层转译为 HTTP 状态码；WHY：与 coins.SessionAlreadyExists 同模式）"""
+    """重练提交校验失败。路由层转译为 HTTP 状态码，与 coins.SessionAlreadyExists 同模式。"""
 
     def __init__(self, status_code: int, code: str, message: str):
         super().__init__(message)
@@ -102,10 +104,12 @@ async def submit_attempts(db: AsyncSession, user_id: int, attempts: list[dict]) 
 
 
 async def build_review_board(db: AsyncSession, user_id: int) -> dict:
-    """聚合 GET /user/review 响应（WHY：列表/统计/安排一次查询组装，接口层只透传。
-    due_count = 待重温数（pending 总数，与入口卡徽标/错题本统计口径一致，见 spec 统计场景；
-    是否可练由到期判定单独表达——关卡加载 due_items 而非全部 pending）；
-    schedule = 明日起的未来 7 天按日到期数）"""
+    """聚合 GET /user/review 响应：列表/统计/安排一次查询组装，接口层只透传。
+
+    due_count = 待重温数（pending 总数，与入口卡徽标/错题本统计口径一致，见 spec 统计
+    场景；是否可练由到期判定单独表达——关卡加载 due_items 而非全部 pending）；
+    schedule = 明日起的未来 7 天按日到期数。
+    """
     rows = (await db.execute(
         select(ReviewItem).where(ReviewItem.user_id == user_id)
         .order_by(ReviewItem.next_review_at.asc(), ReviewItem.id.asc())

@@ -1,4 +1,4 @@
-"""FastAPI 应用入口：装配路由、CORS 与后台任务；启动时建表（WHY：开发期 create_all，不引入 Alembic）"""
+"""FastAPI 应用入口：装配路由、CORS 与后台任务；启动时建表（开发期 create_all，不引入 Alembic）。"""
 import asyncio
 import logging
 from contextlib import asynccontextmanager
@@ -17,8 +17,10 @@ _logger = logging.getLogger(__name__)
 
 
 async def _push_due_reviews(app: FastAPI) -> None:
-    """执行一轮复习提醒推送：扫描到期用户 → 逐用户下发（WHY：单个用户失败记日志不影响其他用户；
-    send_review_reminder 内部已按配额/降级处理）"""
+    """执行一轮复习提醒推送：扫描到期用户 → 逐用户下发。
+
+    单个用户失败记日志不影响其他用户；send_review_reminder 内部已按配额/降级处理。
+    """
     db_engine = app.state.db
     async with db_engine.maker() as db:
         due = await due_users_for_push(db)
@@ -30,9 +32,12 @@ async def _push_due_reviews(app: FastAPI) -> None:
 
 
 async def _review_push_loop(app: FastAPI) -> None:
-    """每日错题复习提醒循环（WHY：应用内 asyncio 任务——项目无外部调度基础设施，沿用建表降级策略；
-    扫描按 next_review_at 天然幂等（漏跑次日补扫），单实例部署下重复执行仅多耗配额不产生数据错误；
-    首日启动立即补跑一次）"""
+    """每日错题复习提醒循环。
+
+    采用应用内 asyncio 任务——项目无外部调度基础设施，沿用建表降级策略；扫描按
+    next_review_at 天然幂等（漏跑次日补扫），单实例部署下重复执行仅多耗配额不产生
+    数据错误；首日启动立即补跑一次。
+    """
     while True:
         try:
             await _push_due_reviews(app)
@@ -47,18 +52,18 @@ async def _review_push_loop(app: FastAPI) -> None:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     deps(app)  # 惰性装配（含 app.state.db）
-    # 接入日志级别（WHY：uvicorn 不配置 root logger——无 handler 时 INFO 级应用日志被静默丢弃，
-    # 「控制台信息少」的根因；LOG_LEVEL 生效是本次追踪方案的前提）
+    # 接入日志级别：uvicorn 不配置 root logger——无 handler 时 INFO 级应用日志被静默丢弃，
+    # 「控制台信息少」的根因；LOG_LEVEL 生效是本次追踪方案的前提
     log_level = getattr(logging, app.state.settings.log_level.upper(), logging.INFO)
     logging.basicConfig(level=log_level, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     validate_settings(app.state.settings)  # 正式模式漏配 JWT_SECRET → 启动即失败（fail fast，防空密钥伪造 token）
-    # 启动摘要（脱敏，WHY：启动即核对环境配置是否如预期——哪些功能启用、密钥已配置但绝不外泄明文）
+    # 启动摘要（脱敏）：启动即核对环境配置是否如预期——哪些功能启用、密钥已配置但绝不外泄明文
     _logger.info("启动配置：%s", app.state.settings.redacted_summary())
     try:
         await app.state.db.create_all()
-    except Exception as exc:  # MySQL 未启动时记录日志继续启动（WHY：不影响 /health 探活，DB 接口调用时再报错）
+    except Exception as exc:  # MySQL 未启动时记录日志继续启动：不影响 /health 探活，DB 接口调用时再报错
         _logger.warning("数据库建表失败，请确认 MySQL 已启动（start-docker.ps1）：%s", exc)
-    # 每日复习提醒定时任务（WHY：任务保存引用防 GC；首日启动补跑一次由循环内首次执行承担）
+    # 每日复习提醒定时任务：任务保存引用防 GC；首日启动补跑一次由循环内首次执行承担
     app.state.review_push_task = asyncio.create_task(_review_push_loop(app))
     _logger.info("复习推送定时任务已注册（每日 %s 时执行，首日启动补跑）",
                  app.state.settings.review_push_hour)
@@ -66,9 +71,9 @@ async def lifespan(app: FastAPI):
 
 
 def create_app() -> FastAPI:
-    """应用工厂（WHY：测试可创建独立实例注入 fake 依赖，避免污染全局状态）"""
+    """应用工厂。测试可创建独立实例注入 fake 依赖，避免污染全局状态。"""
     app = FastAPI(title="AI 闯关学习", lifespan=lifespan)
-    # MVP 无认证，全放开 CORS（WHY：小程序无跨域限制，H5 编译版浏览器验证闭环需要）
+    # MVP 无认证，全放开 CORS：小程序无跨域限制，H5 编译版浏览器验证闭环需要
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],

@@ -1,4 +1,4 @@
-"""SQLAlchemy 异步数据库接入（WHY：统一 engine/session 工厂；bind() 支持测试注入 SQLite 内存库）"""
+"""SQLAlchemy 异步数据库接入：统一 engine/session 工厂；bind() 支持测试注入 SQLite 内存库。"""
 from collections.abc import AsyncIterator
 from urllib.parse import quote_plus
 
@@ -20,7 +20,7 @@ class DBEngine:
         self._maker = None
 
     def bind(self, url: str, **engine_kwargs) -> None:
-        """替换绑定（WHY：测试注入 sqlite+aiosqlite 内存库，不连真实 MySQL）"""
+        """替换绑定：测试注入 sqlite+aiosqlite 内存库，不连真实 MySQL。"""
         self._url = url
         self._engine_kwargs = engine_kwargs
         self._engine = None
@@ -49,14 +49,14 @@ class DBEngine:
         return self._maker
 
     async def create_all(self) -> None:
-        """建表（WHY：开发期 create_all 足够；表少且稳定，不引入 Alembic）"""
+        """建表：开发期 create_all 足够；表少且稳定，不引入 Alembic。"""
         from app.models import db_models  # noqa: F401  导入即注册模型到 metadata
 
         async with self.engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
 
     async def session(self) -> AsyncIterator[AsyncSession]:
-        """FastAPI 依赖：每请求一个会话（WHY：统一生命周期，路由无需管理连接）"""
+        """FastAPI 依赖：每请求一个会话——统一生命周期，路由无需管理连接。"""
         async with self.maker() as session:
             yield session
 

@@ -1,4 +1,4 @@
-"""ORM 模型（WHY：与 Pydantic schema 分离——ORM 面向存储，schema 面向接口/LLM 契约；表结构见方案设计文档-用户系统 4.1~4.3）"""
+"""ORM 模型：与 Pydantic schema 分离——ORM 面向存储，schema 面向接口/LLM 契约；表结构见方案设计文档-用户系统 4.1~4.3。"""
 from datetime import datetime
 
 from sqlalchemy import BigInteger, Boolean, DateTime, Index, Integer, JSON, SmallInteger, String, Text, UniqueConstraint, func
@@ -13,7 +13,7 @@ class User(Base):
 
     __tablename__ = "users"
 
-    # with_variant（WHY：SQLite 仅 INTEGER PRIMARY KEY 自增，测试内存库用 Integer；MySQL 仍为 BIGINT 自增）
+    # with_variant：SQLite 仅 INTEGER PRIMARY KEY 自增，测试内存库用 Integer；MySQL 仍为 BIGINT 自增
     id: Mapped[int] = mapped_column(BigInteger().with_variant(Integer, "sqlite"), primary_key=True, autoincrement=True)
     openid: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
     nickname: Mapped[str] = mapped_column(String(32), nullable=False, default="林中客")
@@ -54,7 +54,7 @@ class CoinTransaction(Base):
     """金币流水（逐题记录：答对 +10 / 答错 −5，封底时按实际扣减额）"""
 
     __tablename__ = "coin_transactions"
-    # 索引名不能与 quiz_sessions.idx_user_created 同名（WHY：SQLite 测试库中索引名全库唯一，MySQL 下虽按表隔离但需兼容测试环境）
+    # 索引名不能与 quiz_sessions.idx_user_created 同名：SQLite 测试库中索引名全库唯一，MySQL 下虽按表隔离但需兼容测试环境
     __table_args__ = (Index("idx_tx_user_created", "user_id", "created_at"),)
 
     id: Mapped[int] = mapped_column(BigInteger().with_variant(Integer, "sqlite"), primary_key=True, autoincrement=True)
@@ -70,7 +70,7 @@ class ReviewItem(Base):
     missed_count 累计错过（「第 N 次错过」展示）；question_json 为题目快照，重练不调 AI）"""
 
     __tablename__ = "review_items"
-    # 索引名不能与其他表重名（WHY：SQLite 测试库中索引名全库唯一）
+    # 索引名不能与其他表重名：SQLite 测试库中索引名全库唯一
     __table_args__ = (Index("idx_review_user_status_next", "user_id", "status", "next_review_at"),)
 
     id: Mapped[int] = mapped_column(BigInteger().with_variant(Integer, "sqlite"), primary_key=True, autoincrement=True)

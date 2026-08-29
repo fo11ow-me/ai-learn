@@ -1,4 +1,4 @@
-"""用户资料接口测试（WHY：受保护接口 401、个人中心契约、昵称编辑与校验）"""
+"""用户资料接口测试：受保护接口 401、个人中心契约、昵称编辑与校验。"""
 from app.core.sensitive import SensitiveFilter
 from tests.conftest import make_valid_answers
 
@@ -60,7 +60,7 @@ async def test_put_me_empty_nickname_422(client):
 
 
 async def test_put_me_blank_nickname_422(client):
-    """纯空格昵称 → 422（WHY：strip 后为空若继续走 avatar_text = nickname[0] 会 500）"""
+    """纯空格昵称 → 422：strip 后为空若继续走 avatar_text = nickname[0] 会 500。"""
     token, _ = await _login(client)
     resp = await client.put("/user/me", json={"nickname": "   "}, headers=_auth(token))
     assert resp.status_code == 422
@@ -142,7 +142,9 @@ async def test_get_session_detail(client, make_valid_quiz):
 
 async def test_get_session_other_user_404(client, test_app, make_valid_quiz):
     """越权访问他人记录 → 404（不泄露存在性）。
-    WHY：MOCK 登录所有 code 映射同一 openid，第二个用户直接落库造数据"""
+
+    MOCK 登录所有 code 映射同一 openid，第二个用户直接落库造数据。
+    """
     from app.models.db_models import User
     from app.services.auth import issue_token
 
@@ -158,7 +160,7 @@ async def test_get_session_other_user_404(client, test_app, make_valid_quiz):
         await db.commit()
         await db.refresh(other)
         other_id = other.id
-    # 签发与解码同源（WHY：get_current_user 统一从 app.state.settings 解码，测试内签发也必须用同一配置）
+    # 签发与解码同源：get_current_user 统一从 app.state.settings 解码，测试内签发也必须用同一配置
     token_b = issue_token(other_id, test_app.state.settings)
 
     resp = await client.get(f"/user/session/{created['session_id']}", headers=_auth(token_b))

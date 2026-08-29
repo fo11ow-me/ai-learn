@@ -66,7 +66,7 @@ async def test_trace_logs_completed(settings, sensitive, make_valid_quiz, caplog
 
 
 async def test_task_id_ctx_restored_after_run(settings, sensitive, make_valid_quiz, caplog):
-    """报告任务执行期间 ctx 注入 task_id，任务结束后恢复（WHY：任务池复用协程，残留旧值会污染下一任务日志）"""
+    """报告任务执行期间 ctx 注入 task_id，任务结束后恢复。任务池复用协程，残留旧值会污染下一任务日志。"""
     store = TaskStore()
     task_id = store.create()
     ai = AIReportSchema.model_validate(make_valid_ai_report())

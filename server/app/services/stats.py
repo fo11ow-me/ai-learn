@@ -1,4 +1,4 @@
-"""个人中心聚合服务（WHY：统计/七日/知识树/最近复盘的计算集中一处；接口层只做组装，契约见方案设计文档-用户系统 5.2）"""
+"""个人中心聚合服务：统计/七日/知识树/最近复盘的计算集中一处；接口层只做组装，契约见方案设计文档-用户系统 5.2。"""
 from collections import Counter
 from datetime import datetime, timedelta
 

@@ -1,4 +1,4 @@
-"""报告回写测试（WHY：报告完成后 report_json 关联到闯关记录；session_id 归属校验）"""
+"""报告回写测试：报告完成后 report_json 关联到闯关记录；session_id 归属校验。"""
 from app.models.schemas import AIReportSchema, QuizSchema
 from tests.conftest import make_valid_ai_report, make_valid_answers
 from tests.test_api import FakeLLM, _poll
@@ -36,7 +36,10 @@ async def test_report_writes_back_to_session(client, test_app, make_valid_quiz):
 
 
 async def test_report_anonymous_without_session_allowed(client, test_app, make_valid_quiz):
-    """匿名（无 token、无 session_id）仍可生成报告 → 202（WHY：需求文档 4.6 游客模式——核心闯关可用但不落库）"""
+    """匿名（无 token、无 session_id）仍可生成报告 → 202。
+
+    需求文档 4.6 游客模式——核心闯关可用但不落库。
+    """
     quiz = QuizSchema.model_validate(make_valid_quiz())
     test_app.state.llm = FakeLLM(quiz=quiz, ai_report=AIReportSchema.model_validate(make_valid_ai_report()))
     resp = await client.post("/report", json={"quiz": make_valid_quiz(), "answers": make_valid_answers()})
@@ -46,7 +49,7 @@ async def test_report_anonymous_without_session_allowed(client, test_app, make_v
 
 
 async def test_report_session_id_requires_login(client, make_valid_quiz):
-    """携带 session_id 但未登录 → 401（WHY：session_id 关联记录必须鉴权，匿名不可写他人记录）"""
+    """携带 session_id 但未登录 → 401：session_id 关联记录必须鉴权，匿名不可写他人记录。"""
     token, _ = await _login(client)
     created = (await client.post("/user/session", headers=_auth(token), json={
         "session_key": "a1b2c3d4-103", "content": "内容", "quiz": make_valid_quiz(),
@@ -58,8 +61,10 @@ async def test_report_session_id_requires_login(client, make_valid_quiz):
 
 
 async def test_report_other_users_session_422(client, test_app, make_valid_quiz):
-    """session_id 不属于当前用户 → 422（WHY：防止报告写进他人记录）。
-    MOCK 登录所有 code 同一 openid，第二用户直接落库造数据"""
+    """session_id 不属于当前用户 → 422：防止报告写进他人记录。
+
+    MOCK 登录所有 code 同一 openid，第二用户直接落库造数据。
+    """
     from app.models.db_models import User
     from app.services.auth import issue_token
 
@@ -77,7 +82,7 @@ async def test_report_other_users_session_422(client, test_app, make_valid_quiz)
         await db.commit()
         await db.refresh(other)
         other_id = other.id
-    # 签发与解码同源（WHY：get_current_user 统一从 app.state.settings 解码，测试内签发也必须用同一配置）
+    # 签发与解码同源：get_current_user 统一从 app.state.settings 解码，测试内签发也必须用同一配置
     token_b = issue_token(other_id, test_app.state.settings)
 
     resp = await client.post("/report", headers=_auth(token_b), json={

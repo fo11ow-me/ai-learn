@@ -14,7 +14,7 @@ from app.services.knowledge_base import KBError, KnowledgeBaseService, format_ch
 from app.services.llm import LLMClient, LLMError
 from app.services.search import SearchClient, SearchError
 
-SEARCH_BUDGET_SECONDS = 20  # 检索段整体预算（WHY：串行搜索/提取不得超过 20s，防顶穿 120s 任务超时）
+SEARCH_BUDGET_SECONDS = 20  # 检索段整体预算：串行搜索/提取不得超过 20s，防止顶穿任务总超时
 
 _logger = logging.getLogger(__name__)
 
@@ -22,7 +22,7 @@ _URL_RE = re.compile(r"^https?://(?:[\w-]+\.)+[a-zA-Z]{2,}(?::\d+)?(?:/[^\s]*)?$
 
 
 def is_url(text: str) -> bool:
-    """判断输入整体是否为网页地址（WHY：纯 URL 输入直达页面提取，跳过 LLM 检索计划，省一次模型调用）"""
+    """判断输入整体是否为网页地址。纯 URL 输入可直达页面提取，跳过 LLM 检索计划，省一次模型调用。"""
     return bool(_URL_RE.match(text.strip()))
 
 
@@ -38,13 +38,28 @@ async def run_quiz_task(
     user_id: int | None = None,
     knowledge_base_id: int | None = None,
 ) -> None:
-    """后台执行出题任务：置 running → 知识库段（可选，RAG D4）→ 联网检索段（可选，失败自动降级）→ 生成
-    （带整体超时）→ 合规检查 → completed；任何失败写 failed + 错误码，绝不把坏数据交给前端。
-    knowledge_base_id 非空 = 严格模式（仅库内出题，永不联网，路由层已做归属校验）；
-    匿名/未配置时知识库段整体跳过，行为与接入前一致"""
-    # 链路日志（WHY：异步任务黑盒，task_id 贯穿各步骤 + 耗时，日志中可重建每次执行全链路）
-    # current_task_id 注入 ContextVar（WHY：LLM/搜索等深层追踪日志经 task_id_kv() 自动携带 task_id，
-    # 无需逐层传参；asyncio.create_task 自动拷贝上下文，子协程可见）
+    """后台执行出题任务：知识库段 → 联网检索段 → 生成题库 → 合规检查 → 写入任务状态。
+
+    知识库段与联网检索段均为可选且失败自动降级：知识库未启用、用户匿名或未指定
+    知识库时整段跳过，行为与未接入检索增强前一致。knowledge_base_id 非空为严格
+    模式——仅基于该知识库出题、永不联网（归属校验已在路由层完成）。任何失败写入
+    failed + 错误码，绝不把坏数据交给前端。
+
+    Args:
+        task_id: 任务 ID。
+        content: 用户输入的出题主题。
+        llm: LLM 客户端，负责生成题库与检索计划。
+        sensitive: 敏感词过滤器，对生成结果做合规检查。
+        settings: 应用配置，提供任务超时等参数。
+        store: 任务状态存储，默认全局 task_store。
+        search: 搜索客户端；None 表示未装配，联网检索段跳过。
+        knowledge_base: 知识库检索服务；None 表示未装配，知识库段跳过。
+        user_id: 用户 ID；None 表示匿名（未登录），知识库段跳过。
+        knowledge_base_id: 知识库 ID；非空为严格模式（仅基于该库出题，永不联网）。
+    """
+    # 链路日志：异步任务执行过程不可见，以 task_id 贯穿各步骤并记录耗时，事后可重建每次执行全链路
+    # current_task_id 注入 ContextVar：LLM/搜索等深层追踪日志自动携带 task_id，无需逐层传参；
+    # asyncio.create_task 自动拷贝上下文，子协程内同样可见
     token = current_task_id.set(task_id)
     t0 = time.monotonic()
     store.update(task_id, status="running")
@@ -93,7 +108,7 @@ async def run_quiz_task(
         )
         _logger.warning("quiz task done task_id=%s status=failed code=LLM_UNAVAILABLE elapsed=%.1fs", task_id, time.monotonic() - t0)
     finally:
-        # 释放 ContextVar（WHY：任务池复用线程/协程，残留 task_id 会让下一任务的日志串上旧值）
+        # 释放 ContextVar：任务池复用协程，不释放会让下一任务的日志串上旧 task_id
         current_task_id.reset(token)
 
 
@@ -106,11 +121,33 @@ async def _retrieve_kb_materials(
     settings: Settings,
     knowledge_base: KnowledgeBaseService | None,
 ) -> tuple[str | None, list[str] | None, bool]:
-    """知识库段（RAG D4）：返回 (文档资料, 判定缺口主题, 仅知识库标志)。
-    降级矩阵：未启用/未注入/匿名/检索异常/未选库无命中 → (None, None, False) 走既有联网路径；
-    判定失败 → 保留文档资料但无定向缺口 → 联网普通补缺；判定足够 → 仅知识库出题不联网；
-    严格模式（kb_id 非空）→ 永不联网：有命中仅库资料，无命中纯输入。
-    WHY：知识库段与联网段同样零故障影响，任何异常都不向出题流程扩散"""
+    """知识库段（RAG D4）：检索私有知识库资料，判断其是否足以出题，返回 (文档资料, 缺口主题, 仅知识库标志)。
+
+    本段与联网段一样零故障影响：任何配置缺失、检索异常或判定失败都只导致降级，
+    不会让错误扩散到出题流程。按如下情形降级或分流：
+
+    - 知识库功能未启用（Embedding 未配置）、服务未装配、或用户匿名 → 整段跳过，
+      返回 (None, None, False)，走原有联网出题路径；
+    - 非严格模式检索无命中 → 同上，走联网路径；
+    - 判定资料足够 → 仅用知识库资料出题、不联网；
+    - 判定资料不足 → 保留资料并返回缺口主题，联网时围绕缺口定向补缺；
+    - 判定失败 → 保留资料、无缺口主题，联网普通补缺；
+    - 严格模式（kb_id 非空）永不联网：有命中仅用库内资料，无命中退化为纯输入出题。
+
+    Args:
+        task_id: 任务 ID，仅用于链路日志。
+        user_id: 用户 ID；None 表示匿名（未登录），知识库段跳过。
+        content: 用户输入的出题主题。
+        kb_id: 知识库 ID；非空为严格模式（仅基于该库出题，永不联网）。
+        llm: LLM 客户端，用于判定资料是否足够。
+        settings: 应用配置，决定知识库段是否启用。
+        knowledge_base: 知识库检索服务；None 表示未装配，整段跳过。
+
+    Returns:
+        (文档资料, 缺口主题, 仅知识库标志)：文档资料为拼接后的文本，无资料时为 None；
+        缺口主题为知识库未覆盖的主题列表，非定向补缺时为 None；仅知识库标志为 True
+        时不联网出题。
+    """
     if not (settings.embedding_enabled and settings.embedding_api_key):
         _logger.info("quiz kb skip task_id=%s reason=disabled_or_no_key", task_id)
         return None, None, False
@@ -124,7 +161,7 @@ async def _retrieve_kb_materials(
         hits = await knowledge_base.search(user_id, content, kb_id)
     except KBError as exc:
         if kb_id is not None:
-            # 严格模式检索失败 → 纯输入降级（WHY：严格模式承诺「仅基于该库出题」，任何情况都不得联网）
+            # 严格模式检索失败 → 纯输入降级：严格模式承诺「仅基于该库出题」，任何情况都不得联网
             _logger.warning("quiz kb strict degrade task_id=%s error=%s", task_id, exc)
             return None, None, True
         _logger.warning("quiz kb degrade task_id=%s reason=%s error=%s", task_id, type(exc).__name__, exc)
@@ -160,10 +197,24 @@ async def _retrieve_search_materials(
     search: SearchClient | None,
     missing_topics: list[str] | None = None,
 ) -> str | None:
-    """检索段（三段式 ①②）：未启用 / 未注入 / 失败 / 超时 / 空资料 → None（降级为一段式）；
-    成功 → 拼接后的资料文本。WHY：检索增强必须零故障影响，任何异常都不向出题流程扩散。
-    missing_topics 非空时检索计划围绕缺失知识点定向补缺（RAG D4）。
-    task_id 仅用于链路日志（可观测性：降级原因必须可见，才能判断「没搜到」还是「没启用」）"""
+    """联网检索段：获取联网资料供出题，成功返回拼接后的文本，任何降级情形返回 None。
+
+    本段零故障影响：搜索功能未启用、服务未装配、失败、超时或空资料都只导致降级为
+    一段式出题，不会让错误扩散到出题流程。降级原因写入日志，便于区分「没搜到」与
+    「没启用」。
+
+    Args:
+        task_id: 任务 ID，仅用于链路日志。
+        content: 用户输入的出题主题；纯 URL 输入时直达页面提取，不制定检索计划。
+        llm: LLM 客户端，负责制定检索计划。
+        settings: 应用配置，决定检索段是否启用。
+        search: 搜索客户端；None 表示未装配，整段跳过。
+        missing_topics: 知识库判定的缺口主题（RAG D4）；非空时检索计划围绕这些
+            主题定向补缺，为 None 时按常规方式检索。
+
+    Returns:
+        拼接后的资料文本；降级时返回 None。
+    """
     if not (settings.search_enabled and settings.tavily_api_key):
         _logger.info("quiz search skip task_id=%s reason=disabled_or_no_key", task_id)
         return None
@@ -185,8 +236,8 @@ async def _retrieve_search_materials(
             )
             if plan.mode == "extract":
                 if not is_url(plan.url):
-                    # 防御无效 URL（WHY：LLM 可能把「https://」误判为可提取地址，实测 Tavily 返回空
-                    # 导致整段检索空跑；无效即弃，降级为一段式出题，不白耗调用）
+                    # 防御无效 URL：LLM 可能把「https://」误判为可提取地址，实测 Tavily 返回空
+                    # 导致整段检索空跑；无效即弃，降级为一段式出题，不白耗调用
                     _logger.warning("quiz search invalid_url task_id=%s url=%s", task_id, plan.url)
                     return None
                 _logger.info("quiz search url_extract task_id=%s url=%s", task_id, plan.url)

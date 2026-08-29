@@ -163,7 +163,7 @@ async def test_report_invalid_answers_422(client, make_valid_quiz):
 
 
 async def test_quiz_submit_logs_running_count(client, test_app, make_valid_quiz, caplog):
-    """提交日志含 running 计数（WHY：并发排查——队列积压一眼可见）"""
+    """提交日志含 running 计数：并发排查——队列积压一眼可见。"""
     quiz = QuizSchema.model_validate(make_valid_quiz())
     test_app.state.llm = FakeLLM(quiz=quiz)
     test_app.state.sensitive = SensitiveFilter(["赌博"])
@@ -210,7 +210,7 @@ def _auth(token):
 
 
 async def test_quiz_with_kb_id_requires_login(client, test_app, make_valid_quiz):
-    """指定知识库但未登录 → 401（WHY：知识库是私有资源，严格模式必须有真实用户归属）"""
+    """指定知识库但未登录 → 401：知识库是私有资源，严格模式必须有真实用户归属。"""
     test_app.state.llm = FakeLLM(quiz=QuizSchema.model_validate(make_valid_quiz()))
     resp = await client.post("/quiz", json={"content": "内容", "knowledge_base_id": 1})
     assert resp.status_code == 401
@@ -227,7 +227,7 @@ async def test_quiz_with_missing_kb_404(client, test_app, make_valid_quiz):
 
 
 async def test_quiz_with_other_users_kb_404(client, test_app, make_valid_quiz):
-    """指定他人知识库 → 404（WHY：归属校验在路由层，他人库与不存在返回一致，不泄露存在性）"""
+    """指定他人知识库 → 404：归属校验在路由层，他人库与不存在返回一致，不泄露存在性。"""
     from app.core.config import Settings
 
     test_app.state.llm = FakeLLM(quiz=QuizSchema.model_validate(make_valid_quiz()))
@@ -247,7 +247,9 @@ async def test_quiz_with_other_users_kb_404(client, test_app, make_valid_quiz):
 
 async def test_quiz_strict_mode_full_flow(client, test_app, make_valid_quiz):
     """严格模式全流程：登录 → 建库 → 上传 → 轮询 ready → 指定库出题 → completed 且注入文档资料。
-    WHY：走真实内存 Chroma + FakeEmbeddings（相同文本余弦≈1 命中，query 与文档一致才可命中）"""
+
+    走真实内存 Chroma + FakeEmbeddings（相同文本余弦≈1 命中，query 与文档一致才可命中）。
+    """
     quiz = QuizSchema.model_validate(make_valid_quiz())
     llm = FakeLLM(quiz=quiz)
     test_app.state.llm = llm

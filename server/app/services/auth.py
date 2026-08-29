@@ -1,4 +1,4 @@
-"""认证服务（WHY：微信 code2session + JWT 签发/校验集中于此，路由层只依赖本模块；MOCK 开关见配置）"""
+"""认证服务：微信 code2session + JWT 签发/校验集中于此，路由层只依赖本模块；MOCK 开关见配置。"""
 import time
 
 import httpx
@@ -19,7 +19,7 @@ class AuthError(Exception):
 
 
 def fetch_openid(code: str, settings: Settings) -> str:
-    """code 换 openid（WHY：AUTH_MOCK 时跳过微信调用，开发期无正式 AppID 也能跑通全流程）"""
+    """code 换 openid。AUTH_MOCK 时跳过微信调用，开发期无正式 AppID 也能跑通全流程。"""
     if settings.auth_mock:
         return settings.auth_mock_openid
     resp = httpx.get(
@@ -32,8 +32,8 @@ def fetch_openid(code: str, settings: Settings) -> str:
         },
         timeout=10,
     )
-    # 非 200 / 非 JSON 响应统一归一化为 AuthError（WHY：微信网关异常时可能返回 HTML
-    # 错误页，resp.json() 解析会抛 ValueError，若不捕获则逃逸为 500，路由层只识别 AuthError）
+    # 非 200 / 非 JSON 响应统一归一化为 AuthError：微信网关异常时可能返回 HTML
+    # 错误页，resp.json() 解析会抛 ValueError，若不捕获则逃逸为 500，路由层只识别 AuthError
     if resp.status_code != 200:
         raise AuthError("微信登录失败，请重试", code="WX_LOGIN_FAILED")
     try:
@@ -53,7 +53,7 @@ def issue_token(user_id: int, settings: Settings) -> str:
 
 
 def decode_token(token: str, settings: Settings) -> int:
-    """解析 JWT 返回 user_id；无效/过期抛 AuthError（WHY：路由依赖统一映射为 401）"""
+    """解析 JWT 返回 user_id；无效/过期抛 AuthError，路由依赖统一映射为 401。"""
     try:
         payload = jwt.decode(token, settings.jwt_secret, algorithms=["HS256"])
         return int(payload["sub"])

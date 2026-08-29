@@ -18,8 +18,11 @@ def sensitive():
 
 
 class FakeSearchClient:
-    """默认返回空资料（= 降级）的搜索客户端（WHY：API 级测试不依赖真实 TAVILY_API_KEY 与网络；
-    用例可按需注入 search_result/extract_result 或抛错，并断言调用记录）"""
+    """默认返回空资料（= 降级）的搜索客户端。
+
+    API 级测试不依赖真实 TAVILY_API_KEY 与网络；用例可按需注入 search_result/
+    extract_result 或抛错，并断言调用记录。
+    """
 
     def __init__(self, search_result="", extract_result="", search_error=None, extract_error=None):
         self.search_result = search_result
@@ -60,7 +63,7 @@ def test_app():
     app.state.db = DBEngine()
     app.state.db.bind("sqlite+aiosqlite://", poolclass=StaticPool)
     app.state.search = FakeSearchClient()
-    # 内存 Chroma + 确定性伪 embedding（WHY：上传→向量化→轮询全流程真实跑通，不依赖百炼 key 与网络）
+    # 内存 Chroma + 确定性伪 embedding：上传→向量化→轮询全流程真实跑通，不依赖百炼 key 与网络
     app.state.knowledge_base = KnowledgeBaseService(
         app.state.settings, build_embeddings=lambda s: FakeEmbeddings()
     )
@@ -150,8 +153,10 @@ def make_valid_answers() -> list[dict]:
 
 
 class FakeEmbeddings:
-    """确定性伪 embedding（WHY：服务级测试不依赖真实百炼 key 与网络；
-    相同文本 → 相同向量（余弦≈1 命中），不同文本 → 伪随机正交（被阈值过滤））"""
+    """确定性伪 embedding：服务级测试不依赖真实百炼 key 与网络。
+
+    相同文本 → 相同向量（余弦≈1 命中），不同文本 → 伪随机正交（被阈值过滤）。
+    """
 
     def __init__(self, dim: int = 1024):
         self.dim = dim

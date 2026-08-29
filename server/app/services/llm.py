@@ -1,4 +1,4 @@
-"""LLM 客户端封装（WHY：供应商可替换、结构化输出、超时重试集中于此，业务代码不感知模型细节）"""
+"""LLM 客户端封装：供应商可替换、结构化输出、超时重试集中于此，业务代码不感知模型细节。"""
 import logging
 import time
 from asyncio import sleep
@@ -16,7 +16,7 @@ from app.models.schemas import AIReportSchema, AnswerRecord, KnowledgeJudgeResul
 
 QUIZ_TEMPERATURE = 0.7  # 出题温度（方案文档 5.1）
 REPORT_TEMPERATURE = 0.5  # 报告温度（方案文档 5.1）
-SEARCH_PLAN_TEMPERATURE = 0.3  # 检索计划温度（WHY：计划要稳定，不要多样性）
+SEARCH_PLAN_TEMPERATURE = 0.3  # 检索计划温度：计划要稳定，不要多样性
 MAX_ATTEMPTS = 3  # 1 次原始调用 + 2 次重试（方案文档 4.4）
 BACKOFF_BASE_SECONDS = 2.0  # 指数退避基数：2s / 4s
 
@@ -45,16 +45,22 @@ class LLMClient:
     async def generate_quiz(
         self, content: str, search_results: str | None = None, doc_materials: str | None = None
     ) -> QuizSchema:
-        """基于用户输入（+可选联网资料/知识库文档资料）生成题库（WHY：任一资料存在时注入对应段落约束事实来源；
-        None 时模板不渲染该段落，Prompt 与接入前逐字一致，向后兼容）"""
+        """基于用户输入（+可选联网资料/知识库文档资料）生成题库。
+
+        任一资料存在时注入对应段落约束事实来源；None 时模板不渲染该段落，
+        Prompt 与接入前逐字一致，向后兼容。
+        """
         prompt = ChatPromptTemplate.from_template(_load_prompt("quiz.txt"), template_format="jinja2").format(
             content=content, search_results=search_results or "", doc_materials=doc_materials or ""
         )
         return await self._invoke_structured(QuizSchema, prompt, QUIZ_TEMPERATURE)
 
     async def plan_search(self, content: str, missing_topics: list[str] | None = None) -> SearchPlanSchema:
-        """制定联网检索计划（WHY：LLM 只决策 mode/关键词/条数/深度，执行由流水线确定性代码完成）。
-        missing_topics 非空 = 知识库判定不足后的定向补缺（RAG D4：检索计划围绕缺失知识点展开而非用户输入泛搜）"""
+        """制定联网检索计划：LLM 只决策 mode/关键词/条数/深度，执行由流水线确定性代码完成。
+
+        missing_topics 非空 = 知识库判定不足后的定向补缺（RAG D4：检索计划围绕缺失
+        知识点展开而非用户输入泛搜）。
+        """
         prompt = ChatPromptTemplate.from_template(_load_prompt("search_plan.txt"), template_format="jinja2").format(
             content=content, missing_topics=missing_topics or []
         )
@@ -78,10 +84,12 @@ class LLMClient:
 
     async def _invoke_structured(self, schema_cls: type[BaseModel], prompt: str, temperature: float) -> BaseModel:
         """结构化生成 + 重试：attempt 1..3，失败退避 2s/4s，最终失败按错误码归类。
-        追踪日志（WHY：INFO 记录第几次成功/耗时/token 用量；DEBUG 记录完整 Prompt 与输出，
-        不改代码即可重建调用现场——注意 DEBUG 含用户输入原文，生产保持 INFO）"""
-        # include_raw=True（WHY：DeepSeek 不支持 json_schema 响应格式，function calling 官方支持且自动解析校验；
-        # include_raw 额外返回原始 AIMessage，用于提取 usage_metadata 的 token 用量）
+
+        追踪日志：INFO 记录第几次成功/耗时/token 用量；DEBUG 记录完整 Prompt 与输出，
+        不改代码即可重建调用现场——注意 DEBUG 含用户输入原文，生产保持 INFO。
+        """
+        # include_raw=True：DeepSeek 不支持 json_schema 响应格式，function calling 官方支持且自动解析校验；
+        # include_raw 额外返回原始 AIMessage，用于提取 usage_metadata 的 token 用量
         model = self._build_model(temperature).with_structured_output(schema_cls, method="function_calling", include_raw=True)
         t0 = time.monotonic()
         last_exc: Exception | None = None
@@ -115,7 +123,7 @@ class LLMClient:
 
 def _default_build_model(settings: Settings, temperature: float):
     """默认模型构建：优先 langchain-deepseek 官方集成；配置 base_url 时走 OpenAI 兼容兜底（方案文档 2.4）。
-    统一关闭思考模式（WHY：DeepSeek v4 默认 thinking 模式不支持 tool_choice，结构化输出依赖工具调用）"""
+    统一关闭思考模式：DeepSeek v4 默认 thinking 模式不支持 tool_choice，结构化输出依赖工具调用。"""
     extra_body = {"thinking": {"type": "disabled"}}
     if settings.deepseek_base_url:
         from langchain_openai import ChatOpenAI
@@ -150,5 +158,5 @@ def _classify_error(exc: Exception | None) -> LLMError:
 
 
 def _load_prompt(name: str) -> str:
-    """从 core/prompts 读取 Prompt 模板（WHY：Prompt 迭代只改文件不改代码）"""
+    """从 core/prompts 读取 Prompt 模板：Prompt 迭代只改文件不改代码。"""
     return (_PROMPTS_DIR / name).read_text(encoding="utf-8")

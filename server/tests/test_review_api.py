@@ -1,4 +1,4 @@
-"""错题本接口测试（WHY：GET /user/review 契约——401/空数据/列表排序/统计/复习安排）"""
+"""错题本接口测试：GET /user/review 契约——401/空数据/列表排序/统计/复习安排。"""
 from datetime import datetime, timedelta
 
 from app.models.db_models import ReviewItem, User
@@ -112,7 +112,9 @@ async def test_get_review_mastered_and_schedule(client, test_app, make_valid_qui
 
 async def test_get_review_user_isolation(client, test_app, make_valid_quiz):
     """错题按用户隔离：他人错题不进入我的列表。
-    WHY：MOCK 登录所有 code 映射同一 openid，第二个用户直接落库造数据（与 test_report_persist 同模式）"""
+
+    MOCK 登录所有 code 映射同一 openid，第二个用户直接落库造数据（与 test_report_persist 同模式）。
+    """
     from app.services.auth import issue_token
 
     token_a, _ = await _login(client)

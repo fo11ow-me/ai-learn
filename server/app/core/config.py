@@ -1,4 +1,4 @@
-"""应用配置（WHY：API Key 等敏感信息集中从环境变量读取，密钥不散落代码、不入仓库）"""
+"""应用配置：API Key 等敏感信息集中从环境变量读取，密钥不散落代码、不入仓库。"""
 import os
 from dataclasses import dataclass, fields
 
@@ -29,7 +29,7 @@ class Settings:
     jwt_expire_days: int = 7
     wechat_appid: str = ""
     wechat_secret: str = ""
-    auth_mock: bool = True  # 开发期跳过 code2session（WHY：无正式 AppID 也能跑通全流程）
+    auth_mock: bool = True  # 开发期跳过 code2session：无正式 AppID 也能跑通全流程
     auth_mock_openid: str = "mock-user"
     search_enabled: bool = True  # 联网搜索总开关；关闭后出题行为与接入前完全一致
     tavily_api_key: str = ""  # Tavily 搜索密钥；空则视同未启用（自动降级为一段式出题）
@@ -122,8 +122,11 @@ class Settings:
         )
 
     def redacted_summary(self) -> str:
-        """启动配置摘要（脱敏）：精确字段名集合判定（WHY：子串匹配会误伤 jwt_expire_days 等
-        含 hint 的普通字段）；长度 ≤8 整体打码（前缀超过密钥长度等于完整泄露），其余字段原样"""
+        """启动配置摘要（脱敏）。
+
+        精确字段名集合判定：子串匹配会误伤 jwt_expire_days 等含 hint 的普通字段；
+        长度 ≤8 整体打码（前缀超过密钥长度等于完整泄露），其余字段原样。
+        """
         _SECRET_FIELDS = {"deepseek_api_key", "mysql_password", "jwt_secret", "wechat_secret", "tavily_api_key", "embedding_api_key"}
         parts = []
         for field in fields(self):
@@ -140,8 +143,11 @@ def get_settings() -> Settings:
 
 
 def validate_settings(settings: Settings) -> None:
-    """启动守卫（WHY：正式模式（auth_mock=False）下 JWT_SECRET 为空会以空密钥签发/校验 JWT，
-    任何人均可伪造任意 user_id 的登录态；开发 MOCK 模式跳过 code2session，不受影响）
+    """启动守卫。
+
+    正式模式（auth_mock=False）下 JWT_SECRET 为空会以空密钥签发/校验 JWT，任何人均
+    可伪造任意 user_id 的登录态；开发 MOCK 模式跳过 code2session，不受影响。
+
 
     @param settings 装配完成的运行配置
     @throws RuntimeError 正式模式且 JWT_SECRET 为空

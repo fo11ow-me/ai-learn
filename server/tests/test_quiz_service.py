@@ -194,8 +194,11 @@ class TestSearchEnhancedPipeline:
         assert search.extract_calls == ["https://example.com/doc"]
 
     async def test_plan_extract_invalid_url_degrades(self, sensitive, make_valid_quiz):
-        """检索计划 mode=extract 但 url 无效（如 https://）→ 不发起提取，直接一段式出题
-        （WHY：无效 URL 进 Tavily 白耗一次调用且丢失搜索增强；实测 LLM 会把「我想学 https:// 的知识」误判为 extract）"""
+        """检索计划 mode=extract 但 url 无效（如 https://）→ 不发起提取，直接一段式出题。
+
+        无效 URL 进 Tavily 白耗一次调用且丢失搜索增强；实测 LLM 会把「我想学
+        https:// 的知识」误判为 extract。
+        """
         store = TaskStore()
         task_id = store.create()
         search = FakeSearchClient(extract_result="不应被调用")
@@ -364,7 +367,7 @@ class TestTraceLogs:
         assert any(
             f"quiz search degrade task_id={task_id}" in r.message
             and "reason=SearchError" in r.message
-            and "error=搜索失败" in r.message  # 错误消息必须随日志输出（WHY：定位 Tavily 失败原因的关键信息）
+            and "error=搜索失败" in r.message  # 错误消息必须随日志输出：定位 Tavily 失败原因的关键信息
             for r in caplog.records
         )
 
@@ -395,8 +398,11 @@ class TestTraceLogs:
 
 
 class TestTaskIdContext:
-    """current_task_id ContextVar 注入与释放（WHY：任务执行期间 LLM/搜索追踪日志经 task_id_kv() 自动聚合，
-    任务结束后必须释放，否则下一任务日志串上旧 task_id）"""
+    """current_task_id ContextVar 注入与释放。
+
+    任务执行期间 LLM/搜索追踪日志经 task_id_kv() 自动聚合，任务结束后必须释放，
+    否则下一任务日志串上旧 task_id。
+    """
 
     class _RecordingLLM:
         """记录 generate_quiz 调用时刻的 ctx task_id，供断言「任务体内已注入」"""

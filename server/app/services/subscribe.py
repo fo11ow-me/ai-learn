@@ -1,5 +1,5 @@
-"""订阅消息推送服务（WHY：微信一次性订阅——授权一次推一条，配额落库；
-开发期 AUTH_MOCK=true 或模板 ID 未配置时仅记日志不发真实消息，与 fetch_openid 的 MOCK 降级策略一致）"""
+"""订阅消息推送服务：微信一次性订阅——授权一次推一条，配额落库；
+开发期 AUTH_MOCK=true 或模板 ID 未配置时仅记日志不发真实消息，与 fetch_openid 的 MOCK 降级策略一致。"""
 import logging
 from datetime import date, datetime, timedelta
 
@@ -31,8 +31,10 @@ async def _quota_sum(db: AsyncSession, user_id: int) -> int:
 
 
 async def _consume_quota(db: AsyncSession, user_id: int) -> bool:
-    """消耗一条配额（任取一条 remain>0 减 1；WHY：配额只计数，不区分授权批次）。
-    @returns 是否消耗成功（False = 无剩余配额）"""
+    """消耗一条配额（任取一条 remain>0 减 1）：配额只计数，不区分授权批次。
+
+    @returns 是否消耗成功（False = 无剩余配额）
+    """
     row = await db.scalar(select(SubscribeQuota).where(
         SubscribeQuota.user_id == user_id, SubscribeQuota.remain > 0).limit(1))
     if row is None:
@@ -42,9 +44,13 @@ async def _consume_quota(db: AsyncSession, user_id: int) -> bool:
 
 
 async def due_users_for_push(db: AsyncSession, today: date | None = None) -> list[tuple[int, int]]:
-    """扫描有到期错题的用户并聚合条数（WHY：每日推送候选集合；按 next_review_at 上界判定，
-    与 review.due_items 同一口径——日期列不加函数包裹以走索引）。
-    @returns [(user_id, due_count)]，按 user_id 去重聚合"""
+    """扫描有到期错题的用户并聚合条数：每日推送候选集合。
+
+    按 next_review_at 上界判定，与 review.due_items 同一口径——日期列不加函数包裹
+    以走索引。
+
+    @returns [(user_id, due_count)]，按 user_id 去重聚合
+    """
     today = today or date.today()
     tomorrow = datetime.combine(today + timedelta(days=1), datetime.min.time())
     rows = (await db.execute(
@@ -56,8 +62,10 @@ async def due_users_for_push(db: AsyncSession, today: date | None = None) -> lis
 
 
 async def _get_access_token(settings: Settings) -> str:
-    """现取现用微信 access_token（WHY：正式模式每次推送前获取，避免过期缓存管理；
-    失败抛异常由调用方记日志，不影响其他用户）"""
+    """现取现用微信 access_token。
+
+    正式模式每次推送前获取，避免过期缓存管理；失败抛异常由调用方记日志，不影响其他用户。
+    """
     async with httpx.AsyncClient(trust_env=False, timeout=10) as client:
         resp = await client.get(f"{WECHAT_API_BASE}/token", params={
             "grant_type": "client_credential",
@@ -94,8 +102,8 @@ async def send_review_reminder(db: AsyncSession, user: User, due_count: int,
                                settings: Settings) -> None:
     """向单用户下发复习提醒。
     - AUTH_MOCK=true 或模板 ID 未配置 → 仅记 INFO 日志，不发真实请求（开发期零外部依赖）
-    - 正式模式 → 配额 ≥1 时消耗 1 条并调微信接口；失败仅记 WARNING 不消耗配额（WHY：
-      失败保留配额让下次有机会重试，且不影响错题数据与重练流程）
+    - 正式模式 → 配额 ≥1 时消耗 1 条并调微信接口；失败仅记 WARNING 不消耗配额——
+      失败保留配额让下次有机会重试，且不影响错题数据与重练流程
     @param user 目标用户（取 openid）
     @param due_count 到期错题数（推送内容）
     """

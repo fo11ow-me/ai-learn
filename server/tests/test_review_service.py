@@ -1,4 +1,4 @@
-"""错题重练服务测试（WHY：收录时机/调度状态机/重练判分的规则正确性——遗忘曲线核心逻辑）"""
+"""错题重练服务测试：收录时机/调度状态机/重练判分的规则正确性——遗忘曲线核心逻辑。"""
 from datetime import datetime, timedelta
 
 import pytest

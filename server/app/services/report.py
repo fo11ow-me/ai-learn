@@ -26,7 +26,7 @@ async def run_report_task(
 ) -> None:
     """后台执行报告任务：置 running → 生成（带整体超时）→ 合规检查 → 组装报告 → completed；
     任何失败写 failed + 错误码。store 默认模块级单例，测试可注入独立实例"""
-    # current_task_id 注入 ContextVar（WHY：LLM 等深层追踪日志经 task_id_kv() 自动携带 task_id）
+    # current_task_id 注入 ContextVar：LLM 等深层追踪日志经 task_id_kv() 自动携带 task_id
     token = current_task_id.set(task_id)
     t0 = time.monotonic()
     store.update(task_id, status="running")
@@ -55,7 +55,7 @@ async def run_report_task(
         store.update(task_id, status="completed", payload={"report": report.model_dump()})
         _logger.info("report task done task_id=%s status=completed elapsed=%.1fs", task_id, time.monotonic() - t0)
         if session_id is not None and db_engine is not None:
-            # 回写闯关记录（WHY：历史报告页直接读库，不再调 AI；回写失败仅记日志不置任务失败）
+            # 回写闯关记录：历史报告页直接读库，不再调 AI；回写失败仅记日志不置任务失败
             try:
                 from sqlalchemy import update
 
@@ -83,13 +83,15 @@ async def run_report_task(
         )
         _logger.warning("report task done task_id=%s status=failed code=LLM_UNAVAILABLE elapsed=%.1fs", task_id, time.monotonic() - t0)
     finally:
-        # 释放 ContextVar（WHY：任务池复用协程，残留 task_id 会让下一任务的日志串上旧值）
+        # 释放 ContextVar：任务池复用协程，不释放会让下一任务的日志串上旧 task_id
         current_task_id.reset(token)
 
 
 def count_correct(quiz: QuizSchema, answers: list[AnswerRecord]) -> int:
-    """统计答对题数（WHY：正确率必须确定性计算，不能信任 AI 算术；
-    多选必须全选正确才判对，与前端判分规则一致）"""
+    """统计答对题数。
+
+    正确率必须确定性计算，不能信任 AI 算术；多选必须全选正确才判对，与前端判分规则一致。
+    """
     by_id = {q.id: q for q in quiz.questions}
     correct = 0
     for a in answers:

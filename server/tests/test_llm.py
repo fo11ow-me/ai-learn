@@ -79,7 +79,7 @@ class TestGenerateQuiz:
         assert builder.temperatures == [0.7]  # 出题温度 0.7（方案文档 5.1）
 
     async def test_success_logs_attempt_and_elapsed(self, settings, fake_sleep, make_valid_quiz, caplog):
-        """成功路径记录第几次成功 + 耗时（WHY：可观测性——重试 1-2 次才成功时，日志可见抖动）"""
+        """成功路径记录第几次成功 + 耗时：可观测性——重试 1-2 次才成功时，日志可见抖动。"""
         quiz = QuizSchema.model_validate(make_valid_quiz())
         builder = FakeBuilder([lambda: quiz])
 
@@ -98,7 +98,7 @@ class TestGenerateQuiz:
         assert any("tokens=in=100 out=50" in r.message for r in caplog.records)
 
     async def test_debug_logs_prompt_and_output(self, settings, fake_sleep, make_valid_quiz, caplog):
-        """DEBUG 级记录完整 Prompt 与结构化输出（WHY：不改代码重建调用现场）"""
+        """DEBUG 级记录完整 Prompt 与结构化输出：不改代码重建调用现场。"""
         quiz = QuizSchema.model_validate(make_valid_quiz())
 
         with caplog.at_level(logging.DEBUG, logger="app.services.llm"):

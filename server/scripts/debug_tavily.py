@@ -1,4 +1,4 @@
-"""Tavily 失败诊断脚本（WHY：排查「Tavily 返回非法 JSON」——直连真实 API 打印 ainvoke 原始返回，定位返回内容而非猜测）"""
+"""Tavily 失败诊断脚本：排查「Tavily 返回非法 JSON」——直连真实 API 打印 ainvoke 原始返回，定位返回内容而非猜测。"""
 import asyncio
 import sys
 

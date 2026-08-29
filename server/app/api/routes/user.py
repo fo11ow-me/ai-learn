@@ -1,4 +1,4 @@
-"""用户路由（WHY：全部受 JWT 保护；路由层只做参数校验与组装，业务在 services）"""
+"""用户路由：全部受 JWT 保护；路由层只做参数校验与组装，业务在 services。"""
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 from sqlalchemy import select
@@ -31,11 +31,11 @@ async def get_me(request: Request, user: User = Depends(get_current_user)) -> di
 @router.put("/user/me")
 async def update_me(body: UpdateMeRequest, request: Request,
                     user: User = Depends(get_current_user)) -> dict:
-    """编辑昵称：敏感词过滤 + 头像同步首字（WHY：文字头像无需文件上传，符合原型）"""
+    """编辑昵称：敏感词过滤 + 头像同步首字。文字头像无需文件上传，符合原型。"""
     sensitive = deps(request.app)[1]
     nickname = body.nickname.strip()
     if not nickname:
-        # 纯空格昵称 strip 后为空（WHY：Pydantic 只校验原始串长度；不拦截会走到 nickname[0] 抛 IndexError → 500）
+        # 纯空格昵称 strip 后为空：Pydantic 只校验原始串长度；不拦截会走到 nickname[0] 抛 IndexError → 500
         raise HTTPException(status_code=422, detail={"code": "INVALID_NICKNAME", "message": "昵称不能为空"})
     if sensitive.contains(nickname):
         raise HTTPException(status_code=422, detail={"code": "INVALID_NICKNAME", "message": "昵称包含敏感信息，请更换"})
@@ -50,7 +50,10 @@ async def update_me(body: UpdateMeRequest, request: Request,
 
 
 class SessionCreateRequest(ReportRequest):
-    """闯关结算请求：复用 ReportRequest 的作答覆盖/索引/单选一致性校验（WHY：契约与报告接口一致，不重复校验逻辑）"""
+    """闯关结算请求：复用 ReportRequest 的作答覆盖/索引/单选一致性校验。
+
+    契约与报告接口一致，不重复校验逻辑。
+    """
 
     session_key: str = Field(min_length=8, max_length=36, pattern=r"^[0-9a-fA-F\-]+$")
     content: str = Field(min_length=1, max_length=2000)
@@ -82,7 +85,10 @@ async def create_session(body: SessionCreateRequest, request: Request,
 @router.get("/user/session/{session_id}")
 async def get_session(session_id: int, request: Request,
                       user: User = Depends(get_current_user)) -> dict:
-    """历史闯关详情：题目快照 + 作答 + 报告（WHY：报告页历史模式数据源；越权统一 404）"""
+    """历史闯关详情：题目快照 + 作答 + 报告。
+
+    报告页历史模式数据源；越权统一 404。
+    """
     db_engine = request.app.state.db
     async with db_engine.maker() as db:
         session = await db.get(QuizSession, session_id)

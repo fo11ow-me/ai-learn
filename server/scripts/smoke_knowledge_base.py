@@ -14,12 +14,12 @@ import io
 import os
 import sys
 
-# 适配 Windows 控制台（WHY：默认 GBK 无法编码 ✓ 等 Unicode 符号，reconfigure 后按 UTF-8 输出）
+# 适配 Windows 控制台：默认 GBK 无法编码 ✓ 等 Unicode 符号，reconfigure 后按 UTF-8 输出
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 import httpx
 
-# 端口可被 SMOKE_BASE_URL 覆盖（WHY：本机 8000 可能落在 Hyper-V 排除端口范围 7963-8062 内无法绑定）
+# 端口可被 SMOKE_BASE_URL 覆盖：本机 8000 可能落在 Hyper-V 排除端口范围 7963-8062 内无法绑定
 BASE = os.environ.get("SMOKE_BASE_URL", "http://127.0.0.1:8000")
 
 # 知识库测试文本（>MIN_TEXT_CHARS=50，且与出题 content 语义相关，保证真实 embedding 检索命中）
@@ -81,8 +81,8 @@ async def upload_and_wait(c: httpx.AsyncClient, kb_id: int, headers: dict,
 
 
 async def main() -> None:
-    # trust_env=False：绕过系统代理直连本机（WHY：Windows 系统代理开启时 httpx 默认转发
-    # 127.0.0.1 请求，代理返回 502 导致冒烟假失败；本地服务验证不需要代理）
+    # trust_env=False：绕过系统代理直连本机——Windows 系统代理开启时 httpx 默认转发
+    # 127.0.0.1 请求，代理返回 502 导致冒烟假失败；本地服务验证不需要代理
     async with httpx.AsyncClient(base_url=BASE, timeout=120, trust_env=False) as c:
         # ── 0. 登录 ──
         login = await c.post("/auth/login", json={"code": "smoke-kb"})
@@ -157,8 +157,8 @@ async def main() -> None:
                          "光反应在类囊体薄膜上进行，暗反应（卡尔文循环）在基质中进行。\n"
                          "影响光合速率的因素包括光照强度、温度与二氧化碳浓度。\n"
                          "植物激素包括生长素、细胞分裂素与脱落酸等。\n").encode(), "text/plain")
-        # content 用与库内文档无关的主题（WHY：量子纠缠 vs 植物学库 → 0 命中验证降级路径；
-        # 若 content 与库内容相关则 hits>0 走命中路径，badcase 场景失效）
+        # content 用与库内文档无关的主题：量子纠缠 vs 植物学库 → 0 命中验证降级路径；
+        # 若 content 与库内容相关则 hits>0 走命中路径，badcase 场景失效
         unrelated = await c.post("/quiz", headers=headers,
                                  json={"content": "量子纠缠的基本原理与贝尔不等式", "knowledge_base_id": kb2_id})
         assert unrelated.status_code == 202, unrelated.text

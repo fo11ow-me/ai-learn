@@ -1,4 +1,4 @@
-"""金币结算服务测试（WHY：判分/封底/防刷/幂等的规则正确性——防作弊关键路径）"""
+"""金币结算服务测试：判分/封底/防刷/幂等的规则正确性——防作弊关键路径。"""
 from datetime import datetime, timedelta
 
 import pytest

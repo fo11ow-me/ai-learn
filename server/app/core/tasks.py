@@ -47,7 +47,7 @@ class TaskStore:
         return self._tasks.get(task_id)
 
     def count_running(self) -> int:
-        """统计 running 状态任务数（WHY：路由提交处打印并发快照，观察任务队列健康）"""
+        """统计 running 状态任务数：路由提交处打印并发快照，观察任务队列健康。"""
         return sum(1 for task in self._tasks.values() if task.status == "running")
 
     def update(self, task_id: str, *, status: TaskStatus | None = None,

@@ -1,4 +1,4 @@
-"""订阅消息服务测试（WHY：一次性授权配额登记/消耗、每日扫描聚合、MOCK 降级不发真实消息）"""
+"""订阅消息服务测试：一次性授权配额登记/消耗、每日扫描聚合、MOCK 降级不发真实消息。"""
 from datetime import datetime, timedelta
 
 import pytest

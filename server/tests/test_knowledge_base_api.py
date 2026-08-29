@@ -137,7 +137,7 @@ class TestUpload:
     async def test_oversize_400(self, client, test_app):
         token, _ = await _login(client)
         kb = await _create_kb(client, token)
-        # jwt_secret 保持与签发一致（WHY：覆盖 settings 只改大小上限，token 解码依赖原 secret）
+        # jwt_secret 保持与签发一致：覆盖 settings 只改大小上限，token 解码依赖原 secret
         test_app.state.settings = Settings(deepseek_api_key="test-key", embedding_api_key="k",
                                            jwt_secret="test-secret", kb_max_file_size_mb=1)
         resp = await _upload(client, token, kb["id"], content="x" * (1024 * 1024 + 1))
@@ -201,7 +201,7 @@ class TestUpload:
 
 class TestIsolation:
     async def _login_as(self, client, test_app, openid):
-        """以指定 openid 登录（WHY：mock 模式 openid 固定为 auth_mock_openid，覆盖 settings 切换用户）"""
+        """以指定 openid 登录。mock 模式 openid 固定为 auth_mock_openid，覆盖 settings 切换用户。"""
         test_app.state.settings = Settings(deepseek_api_key="test-key", embedding_api_key="test-embed-key",
                                            jwt_secret="test-secret", auth_mock_openid=openid)
         resp = await client.post("/auth/login", json={"code": "c"})

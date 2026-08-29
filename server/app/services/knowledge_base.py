@@ -40,7 +40,7 @@ class ChunkHit:
 
 
 def parse_document(filename: str, data: bytes) -> str:
-    """按扩展名解析文档为全文；扫描版/无文本层抛 KBError（WHY：OCR 不做，明确拒绝并提示用户转可复制文本）"""
+    """按扩展名解析文档为全文；扫描版/无文本层抛 KBError。OCR 不做，明确拒绝并提示用户转可复制文本。"""
     ext = Path(filename).suffix.lower().lstrip(".")
     if ext == "pdf":
         return _parse_pdf(data)
@@ -80,7 +80,7 @@ def _parse_docx(data: bytes) -> str:
 
 
 def split_text(text: str, chunk_size: int = 500, chunk_overlap: int = 50) -> list[str]:
-    """分块（WHY：RecursiveCharacterTextSplitter 按段落/标点优先切分，中文按字符计数）"""
+    """分块。RecursiveCharacterTextSplitter 按段落/标点优先切分，中文按字符计数。"""
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=chunk_size, chunk_overlap=chunk_overlap, length_function=len
     )
@@ -89,8 +89,8 @@ def split_text(text: str, chunk_size: int = 500, chunk_overlap: int = 50) -> lis
 
 def _default_build_embeddings(settings: Settings):
     """默认 Embedding 构建（百炼 qwen3.7-text-embedding，OpenAI 兼容端点，维度 1024）。
-    check_embedding_ctx_length=False（WHY：官方 SDK 对未知模型名默认按长文本模型检查上下文，
-    对非 OpenAI 模型会误报超长拒绝）；chunk_size=批量上限 20"""
+    check_embedding_ctx_length=False：官方 SDK 对未知模型名默认按长文本模型检查上下文，
+    对非 OpenAI 模型会误报超长拒绝；chunk_size=批量上限 20。"""
     from langchain_openai import OpenAIEmbeddings
 
     return OpenAIEmbeddings(
@@ -104,7 +104,9 @@ def _default_build_embeddings(settings: Settings):
 
 class KnowledgeBaseService:
     """Chroma 向量索引与检索（设计 D2：单 collection + metadata filter 隔离）。
-    构建参数可注入（WHY：测试注入 FakeEmbeddings + 内存 Chroma，生产走 PersistentClient 目录）"""
+
+    构建参数可注入：测试注入 FakeEmbeddings + 内存 Chroma，生产走 PersistentClient 目录。
+    """
 
     def __init__(
         self,
@@ -126,7 +128,7 @@ class KnowledgeBaseService:
 
     @property
     def collection(self):
-        """collection 惰性初始化（WHY：首次使用时创建；cosine 空间使 relevance = 1 - distance）"""
+        """collection 惰性初始化：首次使用时创建；cosine 空间使 relevance = 1 - distance。"""
         if self._collection is None:
             import chromadb
 
@@ -189,7 +191,7 @@ class KnowledgeBaseService:
         任何异常抛 KBError（调用方捕获后降级，不扩散到出题流程）"""
         top_k = top_k or self._settings.kb_top_k
         min_score = min_score if min_score is not None else self._settings.kb_min_score
-        # Chroma where 顶层只允许一个操作符（WHY：多条件必须用 $and 组合，双键 dict 会校验失败）
+        # Chroma where 顶层只允许一个操作符：多条件必须用 $and 组合，双键 dict 会校验失败
         filt: dict = {"user_id": user_id}
         if kb_id is not None:
             filt = {"$and": [{"user_id": user_id}, {"kb_id": kb_id}]}
@@ -227,8 +229,11 @@ class KnowledgeBaseService:
         return await self._expand_neighbors(hits)
 
     async def _expand_neighbors(self, hits: list[ChunkHit], radius: int = 1) -> list[ChunkHit]:
-        """补齐命中块相邻 chunk（WHY：检索命中往往只有块内一小段，相邻块携带上下文保证资料语义完整；
-        相邻块文本按确定性 id 二次 get 获取，缺失（文档边界）则跳过）"""
+        """补齐命中块相邻 chunk。
+
+        检索命中往往只有块内一小段，相邻块携带上下文保证资料语义完整；相邻块文本按
+        确定性 id 二次 get 获取，缺失（文档边界）则跳过。
+        """
         if not hits:
             return []
         needed: dict[tuple[int, int], ChunkHit | None] = {}
@@ -259,7 +264,7 @@ class KnowledgeBaseService:
 
 
 def format_chunks_for_prompt(hits: list[ChunkHit], limit: int = 4000) -> str:
-    """检索片段拼接为【文档资料】段落（WHY：片段超限截断，与联网资料同一上下文预算）"""
+    """检索片段拼接为【文档资料】段落。片段超限截断，与联网资料同一上下文预算。"""
     parts = [
         f"【来源：{hit.filename} 第 {hit.chunk_index + 1} 段】\n{hit.text}" for hit in hits
     ]

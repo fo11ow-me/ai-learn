@@ -34,7 +34,7 @@ def test_task_id_kv_with_context():
 
 
 async def test_contextvar_propagates_to_subtask():
-    """asyncio.create_task 复制调用方 context → 后台子任务内可见（WHY：run_quiz_task 由 create_task 启动，子任务内模型/工具日志必须带 task_id）"""
+    """asyncio.create_task 复制调用方 context → 后台子任务内可见。run_quiz_task 由 create_task 启动，子任务内模型/工具日志必须带 task_id。"""
 
     async def child():
         return task_id_kv()

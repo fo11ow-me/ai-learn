@@ -1,4 +1,4 @@
-"""登录路由（WHY：登录接口本身无鉴权——它是签发 token 的入口）"""
+"""登录路由：登录接口本身无鉴权——它是签发 token 的入口。"""
 import httpx
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
@@ -19,12 +19,15 @@ class LoginRequest(BaseModel):
 
 @router.post("/auth/login")
 async def login(body: LoginRequest, request: Request) -> dict:
-    """登录：code 换 openid → upsert 用户 → 签发 JWT（WHY：新用户自动注册，老用户幂等返回）"""
+    """登录：code 换 openid → upsert 用户 → 签发 JWT。
+
+    新用户自动注册，老用户幂等返回。
+    """
     settings = deps(request.app)[3]
     try:
         openid = fetch_openid(body.code, settings)
     except (AuthError, httpx.HTTPError, ValueError) as exc:
-        # httpx.HTTPError/ValueError 兜底（WHY：正式模式网络异常或非 JSON 响应统一为 401，不逃逸为 500）
+        # httpx.HTTPError/ValueError 兜底：正式模式网络异常或非 JSON 响应统一为 401，不逃逸为 500
         raise HTTPException(status_code=401, detail={"code": "WX_LOGIN_FAILED", "message": "微信登录失败，请重试"}) from exc
     db_engine = request.app.state.db
     async with db_engine.maker() as db:

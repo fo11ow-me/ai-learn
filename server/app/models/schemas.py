@@ -105,7 +105,9 @@ class MasteryItem(BaseModel):
 
 class AIReportSchema(BaseModel):
     """AI 生成报告部分（with_structured_output 输出契约）。
-    正确率等统计字段由代码计算（WHY：正确率必须确定性计算，不能信任 AI 算术）"""
+
+    正确率等统计字段由代码计算——正确率必须确定性计算，不能信任 AI 算术。
+    """
 
     summary: str = Field(min_length=1, description="知识总结 200~300 字（长度由 Prompt 约束）")
     mastery: list[MasteryItem] = Field(min_length=1)

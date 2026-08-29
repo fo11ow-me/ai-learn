@@ -1,11 +1,14 @@
-"""JWT 鉴权依赖测试（WHY：无 token/坏 token/过期 token/用户不存在 → 统一 401 与错误码）"""
+"""JWT 鉴权依赖测试：无 token/坏 token/过期 token/用户不存在 → 统一 401 与错误码。"""
 import jwt
 import pytest
 
 
 @pytest.fixture(autouse=True)
 def _fixed_settings(test_app, monkeypatch):
-    """固定 JWT 密钥（WHY：测试与真实 .env 解耦；get_current_user 内 get_settings() 按模块属性查找，monkeypatch 生效）"""
+    """固定 JWT 密钥。
+
+    测试与真实 .env 解耦；get_current_user 内 get_settings() 按模块属性查找，monkeypatch 生效。
+    """
     from app.core.config import Settings
 
     test_app.state.settings = Settings(deepseek_api_key="test", jwt_secret="test-secret")
@@ -34,7 +37,7 @@ async def test_me_with_expired_token(client, _fixed_settings):
 
 
 async def test_me_with_unknown_user(client, _fixed_settings):
-    """token 合法但用户不存在 → 401（WHY：伪造/已删用户场景；用户不存在即视为未登录）"""
+    """token 合法但用户不存在 → 401：伪造/已删用户场景；用户不存在即视为未登录。"""
     from app.services.auth import issue_token
 
     token = issue_token(999999, _fixed_settings)

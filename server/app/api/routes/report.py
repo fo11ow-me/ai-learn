@@ -16,7 +16,10 @@ _logger = logging.getLogger(__name__)
 @router.post("/report", status_code=202)
 async def create_report(body: ReportRequest, request: Request,
                         user: User | None = Depends(get_optional_user)) -> dict:
-    """创建报告任务：契约校验 + （可选）session_id 归属校验后异步生成（WHY：游客不关联记录，登录用户回写）"""
+    """创建报告任务：契约校验 + （可选）session_id 归属校验后异步生成。
+
+    游客不关联记录，登录用户回写。
+    """
     llm, sensitive, store, settings = deps(request.app)
     if body.session_id is not None:
         if user is None:
@@ -28,7 +31,7 @@ async def create_report(body: ReportRequest, request: Request,
                 raise HTTPException(status_code=422, detail={"code": "SESSION_NOT_FOUND",
                                                              "message": "闯关记录不存在"})
     task_id = store.create()
-    # 提交日志带 running 计数（WHY：并发排查——多任务并发时一眼看出队列积压）
+    # 提交日志带 running 计数：并发排查——多任务并发时一眼看出队列积压
     _logger.info("report submit task_id=%s questions=%d running=%d", task_id, len(body.quiz.questions), store.count_running())
     asyncio.create_task(run_report_task(
         task_id, body.quiz, body.answers, llm, sensitive, settings,
@@ -38,7 +41,7 @@ async def create_report(body: ReportRequest, request: Request,
 
 @router.get("/report/{task_id}")
 def get_report(task_id: str, request: Request) -> dict:
-    """查询报告任务状态（WHY：轮询接口保持无鉴权，任务 ID 即凭证，向后兼容）"""
+    """查询报告任务状态。轮询接口保持无鉴权——任务 ID 即凭证，向后兼容。"""
     _, _, store, _ = deps(request.app)
     info = store.get(task_id)
     if info is None:

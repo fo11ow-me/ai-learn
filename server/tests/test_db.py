@@ -1,4 +1,4 @@
-"""数据库接入测试（WHY：验证 ORM 模型可建表可读写；SQLite 内存库，不依赖真实 MySQL）"""
+"""数据库接入测试：验证 ORM 模型可建表可读写；SQLite 内存库，不依赖真实 MySQL。"""
 from datetime import datetime, timedelta
 
 import pytest

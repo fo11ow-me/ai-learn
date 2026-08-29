@@ -1,4 +1,4 @@
-"""个人中心聚合服务测试（WHY：统计卡/七日柱状图/知识树/最近复盘计算正确性）"""
+"""个人中心聚合服务测试：统计卡/七日柱状图/知识树/最近复盘计算正确性。"""
 from datetime import datetime, timedelta
 
 import pytest

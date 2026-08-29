@@ -1,4 +1,4 @@
-"""配置启动守卫测试（WHY：正式模式漏配 JWT_SECRET 须 fail fast，防空密钥签发可被任意伪造的 JWT）"""
+"""配置启动守卫测试：正式模式漏配 JWT_SECRET 须 fail fast，防空密钥签发可被任意伪造的 JWT。"""
 import pytest
 
 from app.core.config import Settings, validate_settings

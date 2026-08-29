@@ -25,7 +25,7 @@ TOPIC = "光的波粒二象性"
 
 
 def main() -> None:
-    # trust_env=False：httpx 在 Windows 会读取注册表系统代理，本地冒烟必须直连（WHY：防止请求被系统代理转发导致 502）
+    # trust_env=False：httpx 在 Windows 会读取注册表系统代理，本地冒烟必须直连——防止请求被系统代理转发导致 502
     with httpx.Client(timeout=120, trust_env=False) as client:
         # 1. 出题
         resp = client.post(f"{BASE}/quiz", json={"content": TOPIC})

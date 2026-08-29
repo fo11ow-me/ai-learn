@@ -29,7 +29,7 @@ def _doc_not_found() -> HTTPException:
 
 
 async def _load_kb(db, kb_id: int, user_id: int) -> KnowledgeBase:
-    """加载知识库并校验归属（WHY：归属不匹配与不存在返回同一 404，不泄露资源存在性）"""
+    """加载知识库并校验归属。归属不匹配与不存在返回同一 404，不泄露资源存在性。"""
     kb = await db.get(KnowledgeBase, kb_id)
     if kb is None or kb.user_id != user_id:
         raise _kb_not_found()
@@ -44,7 +44,7 @@ async def _load_doc(db, doc_id: int, user_id: int) -> KnowledgeDocument:
 
 
 def _require_embedding_enabled(settings) -> None:
-    """知识库功能守卫（WHY：未配置 Embedding key 时上传必败，提前 400 提示而非后台任务失败）"""
+    """知识库功能守卫。未配置 Embedding key 时上传必败，提前 400 提示而非后台任务失败。"""
     if not (settings.embedding_enabled and settings.embedding_api_key):
         raise HTTPException(
             status_code=400, detail={"code": "KB_NOT_CONFIGURED", "message": "知识库功能未配置，请联系管理员"}
@@ -123,7 +123,10 @@ async def update_knowledge_base(kb_id: int, body: KnowledgeBaseUpdate, request: 
 @router.delete("/knowledge-base/{kb_id}", status_code=204)
 async def delete_knowledge_base(kb_id: int, request: Request,
                                 user: User = Depends(get_current_user)) -> None:
-    """删除知识库（级联删文档记录；先删 Chroma 索引后删记录——WHY：索引删除失败时记录仍在可重试，反之会留幽灵向量）"""
+    """删除知识库（级联删文档记录；先删 Chroma 索引后删记录）。
+
+    索引删除失败时记录仍在可重试，反之会留幽灵向量。
+    """
     kb_service: KnowledgeBaseService = request.app.state.knowledge_base
     await kb_service.delete_base_chunks(kb_id)
     db_engine = request.app.state.db
@@ -238,7 +241,7 @@ async def delete_document(doc_id: int, request: Request,
 @router.post("/knowledge-base/document/{doc_id}/reindex", status_code=202)
 async def reindex_document(doc_id: int, request: Request,
                            user: User = Depends(get_current_user)) -> dict:
-    """重建索引（WHY：Chroma 卷丢失/损坏时按 MySQL 全文重建，doc_id 幂等覆盖）"""
+    """重建索引。Chroma 卷丢失/损坏时按 MySQL 全文重建，doc_id 幂等覆盖。"""
     settings = deps(request.app)[3]
     _require_embedding_enabled(settings)
     db_engine = request.app.state.db

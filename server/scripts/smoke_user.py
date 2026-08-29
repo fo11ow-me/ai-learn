@@ -3,7 +3,7 @@ import asyncio
 import sys
 import uuid
 
-# 适配 Windows 控制台（WHY：默认 GBK 无法编码 ✓ 等 Unicode 符号，reconfigure 后按 UTF-8 输出）
+# 适配 Windows 控制台：默认 GBK 无法编码 ✓ 等 Unicode 符号，reconfigure 后按 UTF-8 输出
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 import httpx
@@ -12,8 +12,8 @@ BASE = "http://127.0.0.1:8000"
 
 
 async def main() -> None:
-    # trust_env=False：绕过系统代理直连本机（WHY：Windows 系统代理开启时 httpx 默认转发
-    # 127.0.0.1 请求，代理返回 502 导致冒烟假失败；本地服务验证不需要代理）
+    # trust_env=False：绕过系统代理直连本机——Windows 系统代理开启时 httpx 默认转发
+    # 127.0.0.1 请求，代理返回 502 导致冒烟假失败；本地服务验证不需要代理
     async with httpx.AsyncClient(base_url=BASE, timeout=60, trust_env=False) as c:
         login = await c.post("/auth/login", json={"code": "smoke"})
         assert login.status_code == 200, login.text

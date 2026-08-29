@@ -81,8 +81,10 @@ async def test_search_empty_results_returns_empty_string(settings):
 
 
 async def test_search_ainvoke_returns_dict_like_real_api(settings):
-    """真实 langchain-tavily 0.2.18 的 ainvoke 返回解析后的 dict（非 JSON 字符串）→ 必须能解析
-    （WHY：曾因假设返回 JSON 字符串，json.loads(dict) 抛 TypeError 误报「非法 JSON」，检索段全程降级）"""
+    """真实 langchain-tavily 0.2.18 的 ainvoke 返回解析后的 dict（非 JSON 字符串）→ 必须能解析。
+
+    曾因假设返回 JSON 字符串，json.loads(dict) 抛 TypeError 误报「非法 JSON」，检索段全程降级。
+    """
     tool = FakeTool({"query": "q", "results": [_result()]})
     client = SearchClient(settings, build_search=FakeSearchBuilder(tool), build_extract=FakeExtractBuilder(tool))
 
@@ -128,7 +130,7 @@ async def test_search_truncates_long_result(settings):
 
 
 async def test_search_build_receives_plan_count_and_depth(settings):
-    """工厂收到检索计划的 count/depth（WHY：max_results 仅实例化时生效，须按计划动态构建）"""
+    """工厂收到检索计划的 count/depth：max_results 仅实例化时生效，须按计划动态构建。"""
     tool = FakeTool(_search_payload([_result()]))
     builder = FakeSearchBuilder(tool)
     client = SearchClient(settings, build_search=builder)

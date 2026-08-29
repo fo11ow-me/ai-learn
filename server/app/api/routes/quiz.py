@@ -16,8 +16,11 @@ _logger = logging.getLogger(__name__)
 
 @router.post("/quiz", status_code=202)
 async def create_quiz(body: QuizCreateRequest, request: Request) -> dict:
-    """创建出题任务：敏感词过滤（输入侧）→ 知识库归属校验 → 异步生成（WHY：立即返回 task_id，前端 1.5s 轮询）。
-    knowledge_base_id 非空 = 严格模式（仅库内出题）：必须登录且库归属当前用户，否则 401/404（防枚举）"""
+    """创建出题任务：敏感词过滤（输入侧）→ 知识库归属校验 → 异步生成。
+
+    立即返回 task_id，前端 1.5s 轮询。knowledge_base_id 非空 = 严格模式（仅库内出题）：
+    必须登录且库归属当前用户，否则 401/404（防枚举）。
+    """
     llm, sensitive, store, settings = deps(request.app)
     if sensitive.contains(body.content):
         raise HTTPException(
@@ -36,7 +39,7 @@ async def create_quiz(body: QuizCreateRequest, request: Request) -> dict:
         if kb is None:
             raise HTTPException(status_code=404, detail="知识库不存在")
     task_id = store.create()
-    # 提交日志带 running 计数（WHY：并发排查——多任务并发时一眼看出当前队列积压了几个在跑的任务）
+    # 提交日志带 running 计数：并发排查——多任务并发时一眼看出当前队列积压了几个在跑的任务
     _logger.info(
         "quiz submit task_id=%s content_len=%d running=%d kb_id=%s",
         task_id, len(body.content), store.count_running(), body.knowledge_base_id,

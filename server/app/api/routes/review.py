@@ -1,4 +1,4 @@
-"""错题重练路由（WHY：全部受 JWT 保护；路由层只做参数校验与组装，业务在 services/review.py）"""
+"""错题重练路由：全部受 JWT 保护；路由层只做参数校验与组装，业务在 services/review.py。"""
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
