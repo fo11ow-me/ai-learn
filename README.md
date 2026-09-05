@@ -167,6 +167,10 @@ cd server
 | [docs/需求分析文档-用户系统.md](docs/需求分析文档-用户系统.md) | 用户系统专项需求 |
 | [docs/方案设计文档-用户系统.md](docs/方案设计文档-用户系统.md) | 用户系统专项方案（契约单一来源） |
 
+## 交流群
+
+QQ 交流群：**967925576**，欢迎交流使用问题、出题效果与功能建议。
+
 ---
 
-**License**: Not specified. Please contact the author for usage rights.
+**License**: [MIT](LICENSE)

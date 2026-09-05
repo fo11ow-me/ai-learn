@@ -169,6 +169,10 @@ Frontend type check: `cd miniprogram && npm run typecheck`.
 | [docs/需求分析文档-用户系统.md](docs/需求分析文档-用户系统.md) | User-system-specific requirements |
 | [docs/方案设计文档-用户系统.md](docs/方案设计文档-用户系统.md) | User-system-specific design (single source of contract) |
 
+## Community
+
+QQ Group: **967925576** — questions, feedback and feature ideas are welcome.
+
 ---
 
-**License**: Not specified. Please contact the author for usage rights.
+**License**: [MIT](LICENSE)
